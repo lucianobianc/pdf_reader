@@ -32,12 +32,27 @@ QImage Document::render(int index, double zoom) const
     if (!pdf_ || index < 0 || index >= pageCount()) return {};
     auto page = pdf_->page(index);
     if (!page) return {};
-    // Bound raster memory even for unusually large PDF page dimensions.
+    const QSize size = rasterSize(page->pageSizeF(), zoom);
     const QSizeF points = page->pageSizeF();
-    double dpi = 96 * zoom;
-    const double pixels = points.width() * points.height() * dpi * dpi / (72 * 72);
-    if (pixels > 16000000) dpi *= std::sqrt(16000000 / pixels);
+    if (points.isEmpty()) return {};
+    const double dpi = std::min(size.width() * 72 / points.width(), size.height() * 72 / points.height());
     return page->renderToImage(dpi, dpi);
+}
+
+QSizeF Document::pageSize(int index) const
+{
+    if (!pdf_ || index < 0 || index >= pageCount()) return {};
+    const auto page = pdf_->page(index);
+    return page ? page->pageSizeF() : QSizeF{};
+}
+
+QSize Document::rasterSize(QSizeF points, double zoom)
+{
+    if (points.isEmpty()) return {1, 1};
+    double scale = 96 * zoom / 72;
+    const double pixels = points.width() * points.height() * scale * scale;
+    if (pixels > 16000000) scale *= std::sqrt(16000000 / pixels);
+    return (points * scale).toSize().expandedTo(QSize(1, 1));
 }
 
 QVector<Poppler::OutlineItem> Document::outline() const

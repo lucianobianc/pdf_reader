@@ -3,12 +3,21 @@
 #include "page_canvas.h"
 #include "reader_window.h"
 #include <QAction>
+#include <QAbstractButton>
 #include <QComboBox>
 #include <QCryptographicHash>
 #include <QDockWidget>
 #include <QFile>
 #include <QInputDialog>
 #include <QDialog>
+#include <QContextMenuEvent>
+#include <QFileDialog>
+#include <QMessageBox>
+#include <QMenu>
+#include <QToolBar>
+#include <QToolButton>
+#include <QWheelEvent>
+#include <QDir>
 #include <QListWidget>
 #include <QLabel>
 #include <QLineEdit>
@@ -314,13 +323,15 @@ private slots:
             QTest::keyClick(scroll, Qt::Key_J, Qt::ShiftModifier);
             QApplication::processEvents();
             QCOMPARE(window.currentPage(), expected);
-            QCOMPARE(scroll->verticalScrollBar()->value(), 0);
+            auto *view = qobject_cast<DocumentView *>(scroll);
+            QCOMPARE(view->pageCanvas(expected)->mapTo(scroll->viewport(), QPoint{}).y(), 0);
         }
         for (int expected : {1, 0, 0}) {
             QTest::keyClick(scroll, Qt::Key_K, Qt::ShiftModifier);
             QApplication::processEvents();
             QCOMPARE(window.currentPage(), expected);
-            QCOMPARE(scroll->verticalScrollBar()->value(), 0);
+            auto *view = qobject_cast<DocumentView *>(scroll);
+            QCOMPARE(view->pageCanvas(expected)->mapTo(scroll->viewport(), QPoint{}).y(), 0);
         }
         for (const auto &alias : {"p 2", "page 2", "p #2", "page #2", "#2", "2"}) {
             command(window, "1");
@@ -437,6 +448,233 @@ private slots:
         command(window, "chapter 1");
         QVERIFY(input->isVisible());
         QCOMPARE(window.currentPage(), 0);
+    }
+    void continuousPagesAndAnnotations() {
+        ReaderWindow window;
+        activate(window);
+        QVERIFY(window.openDocument(pdf_));
+        auto *view = window.findChild<DocumentView *>();
+        QApplication::processEvents();
+        auto *first = view->pageCanvas(0);
+        auto *second = view->pageCanvas(1);
+        const int boundary = first->y() + first->height();
+        view->verticalScrollBar()->setValue(boundary - view->viewport()->height() / 2);
+        QApplication::processEvents();
+        const QRect viewport = view->viewport()->rect();
+        QVERIFY(viewport.intersects(QRect(first->mapTo(view->viewport(), QPoint{}), first->size())));
+        QVERIFY(viewport.intersects(QRect(second->mapTo(view->viewport(), QPoint{}), second->size())));
+        QVERIFY(first->hasImage());
+        QVERIFY(second->hasImage());
+        const int oldScroll = view->verticalScrollBar()->value();
+        QTest::keyClicks(view, "j");
+        QCOMPARE(view->verticalScrollBar()->value(), oldScroll + 48);
+        QTest::keyClicks(view, "k");
+        QCOMPARE(view->verticalScrollBar()->value(), oldScroll);
+        const QPoint center = view->viewport()->rect().center();
+        QWheelEvent wheel(center, view->viewport()->mapToGlobal(center), {}, QPoint(0, -120),
+            Qt::NoButton, Qt::NoModifier, Qt::NoScrollPhase, false);
+        QApplication::sendEvent(view->viewport(), &wheel);
+        QVERIFY(view->verticalScrollBar()->value() > oldScroll);
+        view->verticalScrollBar()->setValue(second->y());
+        QApplication::processEvents();
+        QCOMPARE(window.currentPage(), 1);
+        QSignalSpy annotations(view, &DocumentView::annotationCreated);
+        action(window, "Highlight")->trigger();
+        drag(*second, {50, 70}, {200, 140});
+        QCOMPARE(annotations.count(), 1);
+        const auto mark = qvariant_cast<Annotation>(annotations.takeFirst()[0]);
+        QCOMPARE(mark.page, 1);
+        QCOMPARE(mark.points.first(), QPointF(50.0 / second->width(), 70.0 / second->height()));
+        action(window, "Navigate [Esc]")->trigger();
+        view->verticalScrollBar()->setValue(second->y() + 100);
+        const double offset = double(view->verticalScrollBar()->value() - second->y()) / second->height();
+        QTest::keyClicks(view, "+");
+        QApplication::processEvents();
+        QCOMPARE(window.currentPage(), 1);
+        const double resizedOffset = double(view->verticalScrollBar()->value() - second->y()) / second->height();
+        QVERIFY(std::abs(offset - resizedOffset) < .003);
+        // The annotation remains attached to page 2 after zoom, theme and scrolling.
+        command(window, "theme dark");
+        QSignalSpy erased(view, &DocumentView::annotationEraseRequested);
+        action(window, "Eraser")->trigger();
+        QTest::mouseClick(second, Qt::LeftButton, Qt::NoModifier,
+            {qRound(.12 * second->width()), qRound(.08 * second->height())});
+        QCOMPARE(erased.count(), 1);
+        action(window, "Undo")->trigger();
+        const auto screenshots = qEnvironmentVariable("NIGHTREADER_TEST_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) {
+            view->verticalScrollBar()->setValue(first->y() + first->height() - view->viewport()->height() / 2);
+            QApplication::processEvents();
+            QVERIFY(window.grab().save(screenshots + "/continuous.png"));
+        }
+    }
+    void nearbyPagesOnlyAndMixedSizes() {
+        const QString path = directory_.filePath("long.pdf");
+        {
+            QPdfWriter writer(path);
+            writer.setResolution(96);
+            QPainter painter(&writer);
+            for (int i = 0; i < 12; ++i) {
+                if (i) QVERIFY(writer.newPage());
+                painter.drawText(50, 80, QString("Page %1").arg(i + 1));
+            }
+        }
+        Document document;
+        QString error;
+        QVERIFY(document.open(path, error));
+        DocumentView view;
+        view.resize(700, 600);
+        view.show();
+        view.setDocument(&document);
+        QApplication::processEvents();
+        QVERIFY(view.pageCanvas(0)->hasImage());
+        QVERIFY(!view.pageCanvas(10)->hasImage());
+        view.goToPage(10);
+        QApplication::processEvents();
+        QCOMPARE(view.currentPage(), 10);
+        QVERIFY(view.pageCanvas(10)->hasImage());
+        QVERIFY(!view.pageCanvas(0)->hasImage());
+        int loaded = 0;
+        for (auto *canvas : view.findChildren<PageCanvas *>()) if (canvas->hasImage()) ++loaded;
+        QVERIFY(loaded <= 4);
+        view.setZoom(.5);
+        view.goToPage(11, true);
+        QCOMPARE(view.verticalScrollBar()->value(), view.verticalScrollBar()->maximum());
+        QCOMPARE(view.currentPage(), 11);
+        const QString mixedPath = directory_.filePath("mixed.pdf");
+        QVERIFY(writePdf(mixedPath, {
+            "<< /Type /Catalog /Pages 2 0 R >>",
+            "<< /Type /Pages /Kids [3 0 R 4 0 R] /Count 2 >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 300 500] /Resources << >> >>",
+            "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 600 250] /Resources << >> >>"
+        }));
+        QVERIFY(document.open(mixedPath, error));
+        view.setDocument(&document);
+        QCOMPARE(view.findChildren<PageCanvas *>().size(), 2);
+        QVERIFY(view.pageCanvas(0)->height() > view.pageCanvas(1)->height());
+        QVERIFY(view.pageCanvas(0)->width() < view.pageCanvas(1)->width());
+        QCOMPARE(view.pageCanvas(0)->geometry().center().x(), view.pageCanvas(1)->geometry().center().x());
+        view.resize(1000, 900);
+        QApplication::processEvents();
+        QVERIFY(view.pageCanvas(0)->hasImage());
+        QVERIFY(view.pageCanvas(1)->hasImage());
+    }
+    void floatingIconToolsAndThemes() {
+        ReaderWindow window;
+        activate(window);
+        QVERIFY(window.openDocument(pdf_));
+        QApplication::processEvents();
+        QVERIFY(window.findChildren<QToolBar *>().isEmpty());
+        auto *view = window.findChild<DocumentView *>();
+        auto *canvas = view->pageCanvas(0);
+        auto *menu = window.findChild<QMenu *>("annotationMenu");
+        QVERIFY(menu);
+        QVERIFY(!menu->isVisible());
+        const QPoint at(100, 100);
+        QContextMenuEvent context(QContextMenuEvent::Mouse, at, canvas->mapToGlobal(at));
+        QApplication::sendEvent(canvas, &context);
+        QApplication::processEvents();
+        QVERIFY(menu->isVisible());
+        QToolButton *highlight = nullptr;
+        for (auto *button : menu->findChildren<QToolButton *>()) {
+            QVERIFY(!button->icon().isNull());
+            QCOMPARE(button->toolButtonStyle(), Qt::ToolButtonIconOnly);
+            QVERIFY(!button->accessibleName().isEmpty());
+            QVERIFY(!button->toolTip().isEmpty());
+            if (button->defaultAction()->text() == "Highlight") highlight = button;
+        }
+        QVERIFY(highlight);
+        const auto screenshots = qEnvironmentVariable("NIGHTREADER_TEST_SCREENSHOT_DIR");
+        if (!screenshots.isEmpty()) QVERIFY(menu->grab().save(screenshots + "/tools.png"));
+        QTest::mouseClick(highlight, Qt::LeftButton);
+        QVERIFY(!menu->isVisible());
+        QVERIFY(action(window, "Highlight")->isChecked());
+        QSignalSpy marks(view, &DocumentView::annotationCreated);
+        drag(*canvas, {50, 70}, {200, 140});
+        QCOMPARE(marks.count(), 1);
+        QTest::keyClick(view, Qt::Key_Escape);
+        QVERIFY(action(window, "Navigate [Esc]")->isChecked());
+        auto *themes = window.findChild<QComboBox *>("readingTheme");
+        for (int expected : {1, 2, 3, 0}) {
+            QTest::keyClicks(view, "t");
+            QCOMPARE(themes->currentIndex(), expected);
+        }
+        command(window, "t burgundy");
+        QCOMPARE(themes->currentIndex(), 3);
+        command(window, "theme dark");
+        QCOMPARE(themes->currentIndex(), 1);
+        command(window, "t");
+        QCOMPARE(themes->currentIndex(), 2);
+        command(window, "theme unknown");
+        QCOMPARE(themes->currentIndex(), 2);
+        auto *input = window.findChild<QLineEdit *>("pageCommand");
+        QVERIFY(input->isVisible());
+        QTest::keyClick(input, Qt::Key_Escape);
+        QTest::keyClicks(view, "a");
+        QVERIFY(menu->isVisible());
+        QTest::keyClick(menu, Qt::Key_Escape);
+        QVERIFY(!menu->isVisible());
+    }
+    void openHelpAndQuitCommands() {
+        const QString path = directory_.filePath("with  spaces.pdf");
+        QVERIFY(QFile::copy(pdf_, path));
+        ReaderWindow window;
+        activate(window);
+        QVERIFY(window.openDocument(pdf_));
+        for (const auto &alias : {"o", "open"}) {
+            command(window, QString(alias) + " \"" + path + "\"");
+            QVERIFY(window.windowTitle().startsWith("with  spaces.pdf"));
+            command(window, "page 2");
+            bool sawPicker = false;
+            command(window, alias, [&] {
+                auto *dialog = qobject_cast<QFileDialog *>(QApplication::activeModalWidget());
+                sawPicker = dialog != nullptr;
+                if (auto *active = qobject_cast<QDialog *>(QApplication::activeModalWidget())) active->reject();
+            });
+            QVERIFY(sawPicker);
+            QCOMPARE(window.currentPage(), 1);
+        }
+        for (const auto &alias : {"h", "help"}) {
+            bool sawHelp = false;
+            command(window, alias, [&] {
+                auto *dialog = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
+                sawHelp = dialog && dialog->text().contains(":open");
+                if (auto *active = qobject_cast<QDialog *>(QApplication::activeModalWidget())) active->accept();
+            });
+            QVERIFY(sawHelp);
+        }
+        for (const auto &alias : {"q", "quit"}) {
+            activate(window);
+            command(window, alias);
+            QVERIFY(!window.isVisible());
+        }
+    }
+    void quitRespectsUnsavedAnnotations() {
+        const QString path = directory_.filePath("unsaved.pdf");
+        QVERIFY(QFile::copy(pdf_, path));
+        const auto original = contents(path);
+        ReaderWindow window;
+        activate(window);
+        QVERIFY(window.openDocument(path));
+        // Block sidecar creation without relying on platform-specific permissions.
+        QVERIFY(QDir().mkdir(path + ".nightreader.json"));
+        action(window, "Highlight")->trigger();
+        drag(*window.findChild<DocumentView *>()->pageCanvas(0), {50, 70}, {200, 140});
+        bool askedToDiscard = false;
+        command(window, "q", [&] {
+            auto *dialog = qobject_cast<QMessageBox *>(QApplication::activeModalWidget());
+            askedToDiscard = dialog && dialog->button(QMessageBox::Cancel);
+            if (askedToDiscard) QTest::mouseClick(dialog->button(QMessageBox::Cancel), Qt::LeftButton);
+            else if (dialog) dialog->reject();
+        });
+        QVERIFY(askedToDiscard);
+        QVERIFY(window.isVisible());
+        command(window, "quit", [&] {
+            if (auto *dialog = qobject_cast<QMessageBox *>(QApplication::activeModalWidget()))
+                QTest::mouseClick(dialog->button(QMessageBox::Discard), Qt::LeftButton);
+        });
+        QVERIFY(!window.isVisible());
+        QCOMPARE(contents(path), original);
     }
     void portugueseCatalog() {
         QTranslator translator;

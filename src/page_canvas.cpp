@@ -12,11 +12,29 @@ PageCanvas::PageCanvas(QWidget *parent) : QWidget(parent)
 
 void PageCanvas::setPage(QImage image, int page)
 {
-    drawing_ = false;
-    original_ = std::move(image);
+    preparePage(page, image.isNull() ? QSize(1, 1) : image.size());
+    setImage(std::move(image));
+}
+
+void PageCanvas::preparePage(int page, QSize size)
+{
+    releaseImage();
     page_ = page;
+    setFixedSize(size.expandedTo(QSize(1, 1)));
+}
+
+void PageCanvas::setImage(QImage image)
+{
+    original_ = std::move(image);
     display_ = applyTheme(original_, theme_);
-    setFixedSize(display_.isNull() ? QSize(1, 1) : display_.size());
+    update();
+}
+
+void PageCanvas::releaseImage()
+{
+    drawing_ = false;
+    original_ = {};
+    display_ = {};
     update();
 }
 
@@ -87,7 +105,8 @@ void PageCanvas::paintEvent(QPaintEvent *)
 {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
-    painter.drawImage(0, 0, display_);
+    if (display_.isNull()) painter.fillRect(rect(), palette().base());
+    else painter.drawImage(rect(), display_);
     for (const auto &mark : marks_) paintAnnotation(painter, mark);
     if (drawing_) paintAnnotation(painter, draft_);
 }
@@ -99,6 +118,7 @@ QPointF PageCanvas::normalized(const QPointF &point) const
 
 void PageCanvas::mousePressEvent(QMouseEvent *event)
 {
+    if (event->button() == Qt::LeftButton || event->button() == Qt::RightButton) emit pageActivated(page_);
     if (event->button() != Qt::LeftButton || tool_ == Tool::Navigate || original_.isNull()) return;
     if (tool_ == Tool::Eraser) { eraseAt(event->position()); return; }
     drawing_ = true;

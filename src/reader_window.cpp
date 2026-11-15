@@ -20,7 +20,14 @@
 #include <QScrollBar>
 #include <QStatusBar>
 #include <QTimer>
-#include <QToolBar>
+#include <QMenu>
+#include <QFrame>
+#include <QGridLayout>
+#include <QToolButton>
+#include <QWidgetAction>
+#include <QSignalBlocker>
+#include <QRegularExpression>
+#include <QDir>
 #include <QTreeWidget>
 #include <algorithm>
 #include <functional>
@@ -29,11 +36,8 @@ ReaderWindow::ReaderWindow(QWidget *parent) : QMainWindow(parent)
 {
     setWindowTitle(tr("Nightreader — PDF reader"));
     resize(1100, 800);
-    canvas_ = new PageCanvas;
-    scroll_ = new QScrollArea(this);
-    scroll_->setObjectName("pageScroll");
-    scroll_->setAlignment(Qt::AlignCenter);
-    scroll_->setWidget(canvas_);
+    view_ = new DocumentView(this);
+    scroll_ = view_;
     setCentralWidget(scroll_);
     outlineDock_ = new QDockWidget(tr("Document outline"), this);
     outlineDock_->setObjectName("outlineDock");
@@ -50,18 +54,19 @@ ReaderWindow::ReaderWindow(QWidget *parent) : QMainWindow(parent)
         const int destination = item->data(0, Qt::UserRole).toInt();
         if (destination >= 0) showPage(destination);
     });
-    createToolbar();
+    createActions();
+    createAnnotationTools();
     command_ = new QLineEdit(this);
     command_->setObjectName("pageCommand");
     command_->setPlaceholderText(tr(":page 123 · :chapter 3 · :c to list chapters · Esc to cancel"));
     command_->hide();
     statusBar()->addPermanentWidget(command_, 1);
-    position_ = new QLabel(tr("Open a PDF to start reading"), this);
+    position_ = new QLabel(tr("Open a PDF with :open or Ctrl+O · :help for help"), this);
     statusBar()->addPermanentWidget(position_);
     connect(command_, &QLineEdit::returnPressed, this, &ReaderWindow::executeCommand);
-    connect(canvas_, &PageCanvas::annotationCreated, this, &ReaderWindow::addAnnotation);
-    connect(canvas_, &PageCanvas::annotationEraseRequested, this, &ReaderWindow::eraseAnnotation);
-    connect(canvas_, &PageCanvas::textBoxRequested, this, [this](Annotation box) {
+    connect(view_, &DocumentView::annotationCreated, this, &ReaderWindow::addAnnotation);
+    connect(view_, &DocumentView::annotationEraseRequested, this, &ReaderWindow::eraseAnnotation);
+    connect(view_, &DocumentView::textBoxRequested, this, [this](Annotation box) {
         if (!annotationsWritable_) return;
         bool accepted = false;
         const QString text = QInputDialog::getMultiLineText(this, tr("Text box"),
@@ -74,102 +79,195 @@ ReaderWindow::ReaderWindow(QWidget *parent) : QMainWindow(parent)
         box.text = text;
         addAnnotation(box);
     });
+    connect(view_, &DocumentView::currentPageChanged, this, [this](int page) {
+        page_ = page;
+        updateStatus();
+    });
+    connect(view_, &DocumentView::renderFailed, this, [this] {
+        statusBar()->showMessage(tr("Could not render this page."), 5000);
+    });
+    connect(view_, &DocumentView::annotationToolsRequested, this, &ReaderWindow::showAnnotationTools);
     qApp->installEventFilter(this);
 }
 
-void ReaderWindow::createToolbar()
+void ReaderWindow::createActions()
 {
-    auto *toolbar = addToolBar(tr("Reading"));
-    toolbar->setMovable(false);
-    auto *open = toolbar->addAction(tr("Open PDF"));
+    auto *open = new QAction(tr("Open PDF"), this);
     open->setShortcut(QKeySequence::Open);
-    connect(open, &QAction::triggered, this, [this] {
-        const auto path = QFileDialog::getOpenFileName(this, tr("Open PDF"), {}, tr("PDF documents (*.pdf)"));
-        if (!path.isEmpty()) openDocument(path);
-    });
-    auto *outline = outlineDock_->toggleViewAction();
-    outline->setText(tr("Outline [Tab]"));
-    toolbar->addAction(outline);
-    toolbar->addSeparator();
-    connect(toolbar->addAction("−"), &QAction::triggered, this, [this] { setZoom(zoom_ - 0.25); });
-    connect(toolbar->addAction("+"), &QAction::triggered, this, [this] { setZoom(zoom_ + 0.25); });
-    toolbar->addWidget(new QLabel(tr("  Reading: ")));
-    auto *themes = new QComboBox(toolbar);
-    themes->setObjectName("readingTheme");
-    themes->addItems({tr("Light"), tr("Dark"), tr("Sepia"), tr("Burgundy")});
-    toolbar->addWidget(themes);
-    connect(themes, &QComboBox::currentIndexChanged, this, [this](int index) {
-        canvas_->setTheme(static_cast<PageCanvas::Theme>(index));
-        const QColor backgrounds[] = {QColor("#e6e8eb"), QColor("#17191e"), QColor("#d4c3a3"), QColor("#21141d")};
-        const QColor foregrounds[] = {QColor("#25272b"), QColor("#dadde3"), QColor("#463627"), QColor("#e4bcc5")};
-        QPalette colors = qApp->palette();
-        colors.setColor(QPalette::Window, backgrounds[index]);
-        colors.setColor(QPalette::Base, backgrounds[index]);
-        colors.setColor(QPalette::AlternateBase, backgrounds[index].lighter(110));
-        colors.setColor(QPalette::Button, backgrounds[index]);
-        for (auto role : {QPalette::WindowText, QPalette::Text, QPalette::ButtonText})
-            colors.setColor(role, foregrounds[index]);
-        setPalette(colors);
-        scroll_->viewport()->setPalette(colors);
-    });
-    helpAction_ = toolbar->addAction(tr("Help [?]"));
+    addAction(open);
+    connect(open, &QAction::triggered, this, &ReaderWindow::openFilePicker);
+    helpAction_ = new QAction(tr("Help [?]"), this);
+    addAction(helpAction_);
     connect(helpAction_, &QAction::triggered, this, [this] {
+        annotationMenu_->hide();
         QMessageBox::information(this, tr("Using Nightreader"),
-            tr("hjkl: scroll (j/k turn pages at the edge)\n"
-               "J/K: next/previous page · H/L: previous/next chapter\n"
-               "d/u: half a screen · gg/G: first/last page\n"
-               ":123, :#123, :p 123 or :page 123 + Enter: go to page\n"
-               ":c or :chapter: list chapters · :chapter 3: go to chapter\n"
+            tr("hjkl: scroll continuously · J/K: next/previous page\n"
+               "H/L: previous/next chapter · d/u: half a screen · gg/G: first/last page\n"
+               ":12, :#12, :p 12 or :page 12: go to page\n"
+               ":c or :chapter: list chapters · :c 3: go to chapter\n"
                ":c next / :c prev: next/previous chapter\n"
-               "Tab: toggle outline · a: annotation toolbar\n"
-               "+/−: zoom · Esc: navigate/cancel · Ctrl+Z: undo the last annotation change\n"
-               "\n"
+               ":o or :open [path]: open PDF · :q or :quit: close the reader\n"
+               ":h or :help: help · :t or :theme [light|dark|sepia|burgundy]: reading mode\n"
+               "t: cycle reading modes · Tab: toggle outline · +/−: zoom\n"
+               "Right-click or a: annotation tools · Esc: navigate/cancel\n"
+               "Ctrl+Z: undo the last annotation change · Ctrl+S: save annotations\n\n"
                "Highlight: drag a rectangle. Draw: drag a freehand stroke.\n"
                "Text: drag a box and enter text. Eraser: click or drag over annotations.\n"
-               "Annotations are saved to <PDF>.nightreader.json. The original PDF is never modified.\n"
-               "Reading filters also transform images in the PDF."));
+               "Annotations are saved to <PDF>.nightreader.json. The original PDF is never modified."));
     });
-    addToolBarBreak();
-    annotationToolbar_ = addToolBar(tr("Annotations"));
-    annotationToolbar_->setObjectName("annotationToolbar");
-    annotationToolbar_->setMovable(false);
+}
+
+void ReaderWindow::createAnnotationTools()
+{
+    annotationMenu_ = new QMenu(this);
+    annotationMenu_->setObjectName("annotationMenu");
+    auto *body = new QFrame(annotationMenu_);
+    auto *layout = new QGridLayout(body);
+    layout->setContentsMargins(8, 8, 8, 8);
+    auto addButton = [this, body, layout](QAction *action, ReaderIcon icon, int row, int column) {
+        iconActions_.append({action, icon});
+        auto *button = new QToolButton(body);
+        button->setDefaultAction(action);
+        button->setAutoRaise(true);
+        button->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        button->setIconSize(QSize(24, 24));
+        button->setMinimumSize(38, 38);
+        button->setAccessibleName(action->text());
+        layout->addWidget(button, row, column);
+    };
     auto *tools = new QActionGroup(this);
-    auto addTool = [this, tools](const QString &label, PageCanvas::Tool tool) {
-        auto *action = annotationToolbar_->addAction(label);
+    auto addTool = [this, tools, addButton](const QString &label, PageCanvas::Tool tool, int column) {
+        auto *action = new QAction(label, this);
         action->setCheckable(true);
         tools->addAction(action);
-        connect(action, &QAction::triggered, this, [this, tool] { canvas_->setTool(tool); });
+        addAction(action);
+        const ReaderIcon icons[] = {ReaderIcon::Navigate, ReaderIcon::Highlight, ReaderIcon::Draw,
+            ReaderIcon::Text, ReaderIcon::Eraser};
+        addButton(action, icons[column], 0, column);
+        if (tool != PageCanvas::Tool::Navigate) annotationActions_.append(action);
+        connect(action, &QAction::triggered, this, [this, tool] {
+            annotationMenu_->hide();
+            view_->setTool(tool);
+            scroll_->setFocus();
+        });
         return action;
     };
-    navigateAction_ = addTool(tr("Navigate [Esc]"), PageCanvas::Tool::Navigate);
+    navigateAction_ = addTool(tr("Navigate [Esc]"), PageCanvas::Tool::Navigate, 0);
     navigateAction_->setChecked(true);
-    addTool(tr("Highlight"), PageCanvas::Tool::Highlight);
-    addTool(tr("Draw"), PageCanvas::Tool::Ink);
-    addTool(tr("Text"), PageCanvas::Tool::Text);
-    addTool(tr("Eraser"), PageCanvas::Tool::Eraser);
-    connect(annotationToolbar_->addAction(tr("Color…")), &QAction::triggered, this, [this] {
-        const auto color = QColorDialog::getColor(QColor("#e5b93f"), this, tr("Annotation color"));
-        if (color.isValid()) canvas_->setColor(color);
+    addTool(tr("Highlight"), PageCanvas::Tool::Highlight, 1);
+    addTool(tr("Draw"), PageCanvas::Tool::Ink, 2);
+    addTool(tr("Text"), PageCanvas::Tool::Text, 3);
+    addTool(tr("Eraser"), PageCanvas::Tool::Eraser, 4);
+    auto *color = new QAction(tr("Color…"), this);
+    addButton(color, ReaderIcon::Color, 1, 0);
+    annotationActions_.append(color);
+    connect(color, &QAction::triggered, this, [this] {
+        annotationMenu_->hide();
+        const auto selected = QColorDialog::getColor(annotationColor_, this, tr("Annotation color"));
+        if (selected.isValid()) { annotationColor_ = selected; view_->setColor(selected); }
     });
-    auto *width = new QComboBox(annotationToolbar_);
-    width->addItems({tr("Thin stroke"), tr("Medium stroke"), tr("Thick stroke")});
-    width->setCurrentIndex(1);
-    annotationToolbar_->addWidget(width);
-    connect(width, &QComboBox::currentIndexChanged, this, [this](int index) {
-        canvas_->setPenWidth(index == 0 ? 0.002 : index == 1 ? 0.004 : 0.008);
+    strokeSelector_ = new QComboBox(body);
+    strokeSelector_->setObjectName("strokeWidth");
+    for (const auto &name : {tr("Thin stroke"), tr("Medium stroke"), tr("Thick stroke")}) {
+        strokeSelector_->addItem(QString{});
+        const int index = strokeSelector_->count() - 1;
+        strokeSelector_->setItemData(index, name, Qt::ToolTipRole);
+        strokeSelector_->setItemData(index, name, Qt::AccessibleTextRole);
+    }
+    strokeSelector_->setAccessibleName(tr("Stroke thickness"));
+    strokeSelector_->setToolTip(tr("Stroke thickness"));
+    strokeSelector_->setIconSize(QSize(24, 24));
+    strokeSelector_->setCurrentIndex(1);
+    layout->addWidget(strokeSelector_, 1, 1, 1, 2);
+    connect(strokeSelector_, &QComboBox::currentIndexChanged, this, [this](int index) {
+        view_->setPenWidth(index == 0 ? 0.002 : index == 1 ? 0.004 : 0.008);
+        const auto name = strokeSelector_->itemData(index, Qt::AccessibleTextRole).toString();
+        strokeSelector_->setToolTip(name);
+        strokeSelector_->setAccessibleDescription(name);
     });
-    auto *undoAction = annotationToolbar_->addAction(tr("Undo"));
+    auto *undoAction = new QAction(tr("Undo"), this);
     undoAction->setShortcut(QKeySequence::Undo);
-    connect(undoAction, &QAction::triggered, this, &ReaderWindow::undo);
-    auto *save = annotationToolbar_->addAction(tr("Save"));
+    addAction(undoAction);
+    addButton(undoAction, ReaderIcon::Undo, 1, 3);
+    annotationActions_.append(undoAction);
+    connect(undoAction, &QAction::triggered, this, [this] { annotationMenu_->hide(); undo(); });
+    auto *save = new QAction(tr("Save"), this);
     save->setShortcut(QKeySequence::Save);
-    connect(save, &QAction::triggered, this, &ReaderWindow::saveAnnotations);
-    auto *toggleAnnotations = annotationToolbar_->toggleViewAction();
-    toggleAnnotations->setText(tr("Annotations [a]"));
-    toolbar->addAction(toggleAnnotations);
-    connect(annotationToolbar_, &QToolBar::visibilityChanged, this, [this](bool visible) {
-        if (!visible) navigateAction_->trigger();
-    });
+    addAction(save);
+    addButton(save, ReaderIcon::Save, 1, 4);
+    annotationActions_.append(save);
+    connect(save, &QAction::triggered, this, [this] { annotationMenu_->hide(); saveAnnotations(); });
+    readingModeIcon_ = new QLabel(body);
+    readingModeIcon_->setAlignment(Qt::AlignCenter);
+    readingModeIcon_->setToolTip(tr("Reading mode"));
+    layout->addWidget(readingModeIcon_, 2, 0);
+    themeSelector_ = new QComboBox(body);
+    themeSelector_->setObjectName("readingTheme");
+    for (const auto &name : {tr("Light"), tr("Dark"), tr("Sepia"), tr("Burgundy")}) {
+        themeSelector_->addItem(QString{});
+        const int index = themeSelector_->count() - 1;
+        themeSelector_->setItemData(index, name, Qt::ToolTipRole);
+        themeSelector_->setItemData(index, name, Qt::AccessibleTextRole);
+    }
+    themeSelector_->setAccessibleName(tr("Reading mode"));
+    themeSelector_->setToolTip(tr("Reading mode"));
+    themeSelector_->setIconSize(QSize(24, 24));
+    layout->addWidget(themeSelector_, 2, 1, 1, 2);
+    connect(themeSelector_, &QComboBox::currentIndexChanged, this, &ReaderWindow::applyTheme);
+    auto *outline = outlineDock_->toggleViewAction();
+    outline->setText(tr("Outline [Tab]"));
+    addButton(outline, ReaderIcon::Outline, 2, 3);
+    addButton(helpAction_, ReaderIcon::Help, 2, 4);
+    auto *contents = new QWidgetAction(annotationMenu_);
+    contents->setDefaultWidget(body);
+    annotationMenu_->addAction(contents);
+    updateToolIcons(palette().color(QPalette::WindowText));
+}
+
+void ReaderWindow::showAnnotationTools(QPoint globalPosition)
+{
+    if (document_.pageCount() > 0) annotationMenu_->popup(globalPosition);
+}
+
+void ReaderWindow::applyTheme(int index)
+{
+    if (index < 0 || index > 3) return;
+    readingTheme_ = index;
+    view_->setTheme(static_cast<PageCanvas::Theme>(index));
+    const QSignalBlocker blocker(themeSelector_);
+    themeSelector_->setCurrentIndex(index);
+    const auto modeName = themeSelector_->itemData(index, Qt::AccessibleTextRole).toString();
+    themeSelector_->setToolTip(modeName);
+    themeSelector_->setAccessibleDescription(modeName);
+    readingModeIcon_->setToolTip(modeName);
+    const QColor backgrounds[] = {QColor("#e6e8eb"), QColor("#17191e"), QColor("#d4c3a3"), QColor("#21141d")};
+    const QColor foregrounds[] = {QColor("#25272b"), QColor("#dadde3"), QColor("#463627"), QColor("#e4bcc5")};
+    QPalette colors = qApp->palette();
+    for (auto role : {QPalette::Window, QPalette::Base, QPalette::Button})
+        colors.setColor(role, backgrounds[index]);
+    colors.setColor(QPalette::AlternateBase, backgrounds[index].lighter(110));
+    for (auto role : {QPalette::WindowText, QPalette::Text, QPalette::ButtonText})
+        colors.setColor(role, foregrounds[index]);
+    setPalette(colors);
+    annotationMenu_->setPalette(colors);
+    scroll_->viewport()->setPalette(colors);
+    updateToolIcons(foregrounds[index]);
+}
+
+void ReaderWindow::updateToolIcons(QColor foreground)
+{
+    for (const auto &entry : iconActions_) entry.first->setIcon(readerIcon(entry.second, foreground));
+    const ReaderIcon modes[] = {ReaderIcon::Light, ReaderIcon::Dark, ReaderIcon::Sepia, ReaderIcon::Burgundy};
+    for (int i = 0; i < 4; ++i) themeSelector_->setItemIcon(i, readerIcon(modes[i], foreground));
+    const ReaderIcon strokes[] = {ReaderIcon::ThinStroke, ReaderIcon::MediumStroke, ReaderIcon::ThickStroke};
+    for (int i = 0; i < 3; ++i) strokeSelector_->setItemIcon(i, readerIcon(strokes[i], foreground));
+    readingModeIcon_->setPixmap(readerIcon(modes[readingTheme_], foreground).pixmap(24, 24));
+}
+
+void ReaderWindow::openFilePicker()
+{
+    const auto path = QFileDialog::getOpenFileName(this, tr("Open PDF"), {}, tr("PDF documents (*.pdf)"));
+    if (!path.isEmpty()) openDocument(path);
 }
 
 bool ReaderWindow::openDocument(const QString &path)
@@ -183,13 +281,15 @@ bool ReaderWindow::openDocument(const QString &path)
     dirty_ = false;
     history_.clear();
     annotationsWritable_ = annotations_.load(document_.path(), document_.fingerprint(), document_.pageCount(), error);
-    annotationToolbar_->setEnabled(annotationsWritable_);
+    for (auto *action : annotationActions_) action->setEnabled(annotationsWritable_);
+    strokeSelector_->setEnabled(annotationsWritable_);
     navigateAction_->trigger();
     if (!annotationsWritable_) QMessageBox::warning(this, tr("Protected annotations"), error);
     chapters_ = document_.chapters();
     populateOutline();
     setWindowTitle(QFileInfo(path).fileName() + " — Nightreader");
-    canvas_->setAnnotations(annotations_.items);
+    view_->setAnnotations(annotations_.items);
+    view_->setDocument(&document_);
     showPage(0);
     return true;
 }
@@ -219,39 +319,28 @@ void ReaderWindow::populateOutline()
 
 void ReaderWindow::showPage(int page, bool bottom)
 {
-    if (page < 0 || page >= document_.pageCount()) return;
-    const QImage image = document_.render(page, zoom_);
-    if (image.isNull()) {
-        statusBar()->showMessage(tr("Could not render this page."), 5000);
-        return;
-    }
-    page_ = page;
-    canvas_->setPage(image, page_);
-    scroll_->verticalScrollBar()->setValue(bottom ? scroll_->verticalScrollBar()->maximum() : 0);
-    // Layout may update the scrollbar range after the canvas changes size.
-    QTimer::singleShot(0, this, [this, bottom] {
-        scroll_->verticalScrollBar()->setValue(bottom ? scroll_->verticalScrollBar()->maximum() : 0);
-    });
-    scroll_->setFocus();
-    updateStatus();
+    view_->goToPage(page, bottom);
 }
 
 void ReaderWindow::scrollVertical(int amount)
 {
     auto *bar = scroll_->verticalScrollBar();
-    if (amount > 0 && bar->value() == bar->maximum() && page_ + 1 < document_.pageCount()) showPage(page_ + 1);
-    else if (amount < 0 && bar->value() == 0 && page_ > 0) showPage(page_ - 1, true);
-    else bar->setValue(bar->value() + amount);
+    bar->setValue(bar->value() + amount);
 }
 
 void ReaderWindow::setZoom(double zoom)
 {
     zoom_ = std::clamp(zoom, 0.5, 3.0);
-    showPage(page_);
+    view_->setZoom(zoom_);
+    updateStatus();
 }
 
 void ReaderWindow::updateStatus()
 {
+    if (document_.pageCount() == 0) {
+        position_->setText(tr("Open a PDF with :open or Ctrl+O · :help for help"));
+        return;
+    }
     position_->setText(QString(tr("Page %1 / %2 · %3% · %4"))
         .arg(page_ + 1).arg(document_.pageCount()).arg(qRound(zoom_ * 100))
         .arg(dirty_ ? tr("unsaved annotations") : tr("annotations saved separately")));
@@ -286,7 +375,7 @@ void ReaderWindow::addAnnotation(const Annotation &mark)
     if (!annotationsWritable_) return;
     history_.append({mark, int(annotations_.items.size()), true});
     annotations_.items.append(mark);
-    canvas_->setAnnotations(annotations_.items);
+    view_->setAnnotations(annotations_.items);
     dirty_ = true;
     saveAnnotations();
 }
@@ -296,7 +385,7 @@ void ReaderWindow::eraseAnnotation(int index)
     if (!annotationsWritable_ || index < 0 || index >= annotations_.items.size()) return;
     history_.append({annotations_.items[index], index, false});
     annotations_.items.removeAt(index);
-    canvas_->setAnnotations(annotations_.items);
+    view_->setAnnotations(annotations_.items);
     dirty_ = true;
     saveAnnotations();
 }
@@ -307,7 +396,7 @@ void ReaderWindow::undo()
     const auto edit = history_.takeLast();
     if (edit.added) annotations_.items.removeAt(edit.index);
     else annotations_.items.insert(edit.index, edit.mark);
-    canvas_->setAnnotations(annotations_.items);
+    view_->setAnnotations(annotations_.items);
     dirty_ = true;
     saveAnnotations();
     if (edit.mark.page != page_) showPage(edit.mark.page);
@@ -383,9 +472,45 @@ void ReaderWindow::executeCommand()
 {
     QString value = command_->text().trimmed();
     if (value.startsWith(':')) value.remove(0, 1);
-    const QStringList words = value.simplified().split(' ', Qt::SkipEmptyParts);
-    const QString name = words.value(0);
-    const QString argument = words.mid(1).join(' ');
+    value = value.trimmed();
+    const qsizetype separator = value.indexOf(QRegularExpression("\\s"));
+    const QString name = separator < 0 ? value : value.left(separator);
+    const QString argument = separator < 0 ? QString{} : value.mid(separator).trimmed();
+    if (name == "o" || name == "open") {
+        command_->hide();
+        if (argument.isEmpty()) openFilePicker();
+        else {
+            QString path = argument;
+            if (path.size() >= 2 && ((path.startsWith('"') && path.endsWith('"')) ||
+                    (path.startsWith('\'') && path.endsWith('\''))))
+                path = path.mid(1, path.size() - 2);
+            if (path.startsWith("~/")) path.replace(0, 1, QDir::homePath());
+            openDocument(path);
+        }
+        return;
+    }
+    if (name == "q" || name == "quit") {
+        if (!argument.isEmpty()) { commandError(tr("Usage: :q or :quit")); return; }
+        command_->hide();
+        close();
+        return;
+    }
+    if (name == "h" || name == "help") {
+        command_->hide();
+        helpAction_->trigger();
+        return;
+    }
+    if (name == "t" || name == "theme") {
+        const QStringList themes = {"light", "dark", "sepia", "burgundy"};
+        const int theme = themes.indexOf(argument);
+        if (!argument.isEmpty() && theme < 0) {
+            commandError(tr("Reading modes: light, dark, sepia, burgundy."));
+            return;
+        }
+        command_->hide();
+        applyTheme(argument.isEmpty() ? (readingTheme_ + 1) % 4 : theme);
+        return;
+    }
     if (name == "c" || name == "chapter") {
         if (argument.isEmpty()) {
             showChapterList();
@@ -425,12 +550,15 @@ bool ReaderWindow::eventFilter(QObject *object, QEvent *event)
         return QMainWindow::eventFilter(object, event);
     auto *key = static_cast<QKeyEvent *>(event);
     if (key->key() == Qt::Key_Escape) {
+        if (auto *popup = QApplication::activePopupWidget(); popup && popup != annotationMenu_) return false;
+        annotationMenu_->hide();
         command_->hide();
         navigateAction_->trigger();
         pendingG_.invalidate();
         scroll_->setFocus();
         return true;
     }
+    if (QApplication::activePopupWidget()) return false;
     if (qobject_cast<QLineEdit *>(QApplication::focusWidget()) ||
         key->modifiers().testFlag(Qt::ControlModifier) || key->modifiers().testFlag(Qt::AltModifier) ||
         key->modifiers().testFlag(Qt::MetaModifier)) return false;
@@ -470,7 +598,8 @@ bool ReaderWindow::eventFilter(QObject *object, QEvent *event)
     else if (text == ":") { command_->setText(":"); command_->show(); command_->setFocus(); }
     else if (text == "+" || text == "=") setZoom(zoom_ + 0.25);
     else if (text == "-") setZoom(zoom_ - 0.25);
-    else if (text == "a") annotationToolbar_->setVisible(!annotationToolbar_->isVisible());
+    else if (text == "a") showAnnotationTools(scroll_->viewport()->mapToGlobal(scroll_->viewport()->rect().center()));
+    else if (text == "t") applyTheme((readingTheme_ + 1) % 4);
     else if (key->key() == Qt::Key_Tab) outlineDock_->setVisible(!outlineDock_->isVisible());
     else if (text == "?") {
         helpAction_->trigger();

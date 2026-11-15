@@ -2,7 +2,7 @@
 
 A desktop PDF reader with vi-style navigation, annotations, and night reading modes.
 
-- Navigate pages and chapters from the keyboard.
+- Scroll continuously through pages and navigate chapters from the keyboard.
 - Read in light, dark, sepia, or burgundy mode.
 - Add highlights, freehand drawings, and text boxes in your choice of color.
 - Browse the document outline in a collapsible sidebar.
@@ -47,7 +47,8 @@ To install, run `cmake --install build --prefix /your/install/path`.
 | `d`, `u` | Scroll half a screen down / up |
 | `gg`, `G` | First page / end of last page |
 | `Tab` | Show or hide the document outline |
-| `a` | Show or hide annotation tools |
+| Right-click or `a` | Open annotation tools |
+| `t` | Cycle through reading modes |
 | `Esc` | Cancel a command or return to navigation |
 | `+`, `-` | Zoom in / out |
 | `Ctrl+O` | Open a PDF |
@@ -55,8 +56,9 @@ To install, run `cmake --install build --prefix /your/install/path`.
 | `Ctrl+Z` | Undo an annotation change |
 | `?` | Show help |
 
-At the bottom or top of a page, `j` and `k` continue to the next or previous page.
-`J` and `K` change pages immediately, regardless of the scroll position.
+Pages appear one below the other, so you can see the end of one and the beginning
+of the next together. Use the mouse wheel or `j`/`k` to scroll continuously.
+`J` and `K` jump to the next or previous page.
 
 Chapters follow the first level of the document outline. From within a chapter,
 `H` returns to its beginning; press it again to reach the preceding chapter.
@@ -70,24 +72,37 @@ Page and chapter numbers start at 1.
 
 | Command | Action |
 | --- | --- |
+| `:o`, `:open` | Open the file picker |
+| `:o document.pdf`, `:open document.pdf` | Open a PDF by path |
+| `:q`, `:quit` | Close the reader |
+| `:h`, `:help` | Show help |
+| `:t`, `:theme` | Cycle through reading modes |
+| `:t dark`, `:theme dark` | Choose a reading mode |
 | `:12`, `:#12`, `:p 12`, `:page 12` | Go to page 12 |
 | `:c`, `:chapter` | Open the chapter list |
 | `:c 3`, `:chapter 3` | Go to chapter 3 |
 | `:c next`, `:chapter next` | Go to the next chapter |
 | `:c prev`, `:chapter prev` | Go to the previous chapter start |
 
+Paths containing spaces can be quoted: `:open "my documents/book.pdf"`.
+
 In the chapter list, use the arrow keys to choose a chapter and Enter to open it.
 Esc closes the list.
 
 ## Reading modes
 
-Choose **Light**, **Dark**, **Sepia**, or **Burgundy** from the reading toolbar.
+Press `t` to cycle through **Light**, **Dark**, **Sepia**, and **Burgundy**.
+To choose directly, use `:theme light`, `:theme dark`, `:theme sepia`, or
+`:theme burgundy`. Reading modes are also available in the right-click toolbox.
+
 The filter applies to the whole page, including photos and figures. Annotations
 keep their selected colors.
 
 ## Annotations
 
-Use the annotation toolbar to choose a tool and color:
+Right-click on a page to open the floating toolbox. Its buttons use icons; hover
+over one to see its name. Choose a tool, color, and stroke thickness, then return
+to the document to annotate. You can also open the toolbox with `a`.
 
 - **Highlight:** drag a rectangle over the area to highlight.
 - **Draw:** draw with the mouse and choose a stroke thickness.

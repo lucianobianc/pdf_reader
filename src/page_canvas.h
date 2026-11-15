@@ -10,6 +10,12 @@ public:
     enum class Theme { Light, Dark, Sepia, Burgundy };
     explicit PageCanvas(QWidget *parent = nullptr);
     void setPage(QImage image, int page);
+    void preparePage(int page, QSize size);
+    void setImage(QImage image);
+    void releaseImage();
+    bool hasImage() const { return !original_.isNull(); }
+    bool isDrawing() const { return drawing_; }
+    int pageNumber() const { return page_; }
     void setTheme(Theme theme);
     void setTool(Tool tool);
     void setColor(QColor color) { color_ = color; }
@@ -17,6 +23,7 @@ public:
     void setAnnotations(QVector<Annotation> marks);
     static QImage applyTheme(const QImage &source, Theme theme);
 signals:
+    void pageActivated(int page);
     void annotationCreated(const Annotation &mark);
     void textBoxRequested(const Annotation &box);
     void annotationEraseRequested(int index);

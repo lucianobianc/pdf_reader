@@ -1,7 +1,8 @@
 #pragma once
 #include "annotations.h"
 #include "document.h"
-#include "page_canvas.h"
+#include "document_view.h"
+#include "icons.h"
 #include <QElapsedTimer>
 #include <QMainWindow>
 
@@ -10,7 +11,8 @@ class QDockWidget;
 class QLabel;
 class QLineEdit;
 class QScrollArea;
-class QToolBar;
+class QMenu;
+class QComboBox;
 class QTreeWidget;
 
 class ReaderWindow : public QMainWindow {
@@ -23,7 +25,12 @@ protected:
     bool eventFilter(QObject *object, QEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
 private:
-    void createToolbar();
+    void createActions();
+    void createAnnotationTools();
+    void showAnnotationTools(QPoint globalPosition);
+    void applyTheme(int index);
+    void updateToolIcons(QColor foreground);
+    void openFilePicker();
     void showPage(int page, bool bottom = false);
     void scrollVertical(int amount);
     void setZoom(double zoom);
@@ -41,11 +48,18 @@ private:
     Document document_;
     AnnotationStore annotations_;
     QVector<Chapter> chapters_;
-    PageCanvas *canvas_;
+    DocumentView *view_;
     QScrollArea *scroll_;
     QDockWidget *outlineDock_;
     QTreeWidget *outlineTree_;
-    QToolBar *annotationToolbar_;
+    QMenu *annotationMenu_;
+    QComboBox *themeSelector_;
+    QComboBox *strokeSelector_;
+    QVector<QAction *> annotationActions_;
+    QVector<QPair<QAction *, ReaderIcon>> iconActions_;
+    QLabel *readingModeIcon_;
+    QColor annotationColor_ = QColor("#e5b93f");
+    int readingTheme_ = 0;
     QLineEdit *command_;
     QLabel *position_;
     QAction *navigateAction_;

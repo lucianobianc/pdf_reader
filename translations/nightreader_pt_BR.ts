@@ -11,8 +11,12 @@
       <translation>Estrutura do documento</translation>
     </message>
     <message>
-      <source>Open a PDF to start reading</source>
-      <translation>Abra um PDF para começar</translation>
+      <source>:page 123 · :chapter 3 · :c to list chapters · Esc to cancel</source>
+      <translation>:page 123 · :chapter 3 · :c lista capítulos · Esc cancela</translation>
+    </message>
+    <message>
+      <source>Open a PDF with :open or Ctrl+O · :help for help</source>
+      <translation>Abra um PDF com :open ou Ctrl+O · :help para ajuda</translation>
     </message>
     <message>
       <source>Text box</source>
@@ -27,48 +31,50 @@
       <translation>O texto excede o limite de 10.000 caracteres.</translation>
     </message>
     <message>
-      <source>Reading</source>
-      <translation>Leitura</translation>
+      <source>Could not render this page.</source>
+      <translation>Falha ao renderizar a página.</translation>
     </message>
     <message>
       <source>Open PDF</source>
       <translation>Abrir PDF</translation>
     </message>
     <message>
-      <source>PDF documents (*.pdf)</source>
-      <translation>Documentos PDF (*.pdf)</translation>
-    </message>
-    <message>
-      <source>Outline [Tab]</source>
-      <translation>Sumário [Tab]</translation>
-    </message>
-    <message>
-      <source>  Reading: </source>
-      <translation>  Leitura: </translation>
-    </message>
-    <message>
-      <source>Light</source>
-      <translation>Claro</translation>
-    </message>
-    <message>
-      <source>Dark</source>
-      <translation>Escuro</translation>
-    </message>
-    <message>
-      <source>Sepia</source>
-      <translation>Sépia</translation>
-    </message>
-    <message>
-      <source>Burgundy</source>
-      <translation>Bordô</translation>
-    </message>
-    <message>
       <source>Help [?]</source>
       <translation>Ajuda [?]</translation>
     </message>
     <message>
-      <source>Annotations</source>
-      <translation>Anotações</translation>
+      <source>Using Nightreader</source>
+      <translation>Como usar o Nightreader</translation>
+    </message>
+    <message>
+      <source>hjkl: scroll continuously · J/K: next/previous page
+H/L: previous/next chapter · d/u: half a screen · gg/G: first/last page
+:12, :#12, :p 12 or :page 12: go to page
+:c or :chapter: list chapters · :c 3: go to chapter
+:c next / :c prev: next/previous chapter
+:o or :open [path]: open PDF · :q or :quit: close the reader
+:h or :help: help · :t or :theme [light|dark|sepia|burgundy]: reading mode
+t: cycle reading modes · Tab: toggle outline · +/−: zoom
+Right-click or a: annotation tools · Esc: navigate/cancel
+Ctrl+Z: undo the last annotation change · Ctrl+S: save annotations
+
+Highlight: drag a rectangle. Draw: drag a freehand stroke.
+Text: drag a box and enter text. Eraser: click or drag over annotations.
+Annotations are saved to &lt;PDF&gt;.nightreader.json. The original PDF is never modified.</source>
+      <translation>hjkl: rolagem contínua · J/K: próxima/página anterior
+H/L: capítulo anterior/próximo · d/u: meia tela · gg/G: primeira/última página
+:12, :#12, :p 12 ou :page 12: ir para a página
+:c ou :chapter: listar capítulos · :c 3: ir ao capítulo
+:c next / :c prev: próximo/capítulo anterior
+:o ou :open [caminho]: abrir PDF · :q ou :quit: fechar o leitor
+:h ou :help: ajuda · :t ou :theme [light|dark|sepia|burgundy]: modo de leitura
+t: alternar modos de leitura · Tab: alternar sumário · +/−: zoom
+Botão direito ou a: ferramentas de anotação · Esc: navegar/cancelar
+Ctrl+Z: desfazer a última alteração · Ctrl+S: salvar anotações
+
+Grifo: arraste um retângulo. Desenho: arraste um traço livre.
+Texto: arraste uma caixa e digite. Borracha: clique ou arraste sobre anotações.
+Anotações são salvas em &lt;PDF&gt;.nightreader.json. O PDF original nunca é alterado.</translation>
     </message>
     <message>
       <source>Navigate [Esc]</source>
@@ -111,6 +117,10 @@
       <translation>Traço grosso</translation>
     </message>
     <message>
+      <source>Stroke thickness</source>
+      <translation>Espessura do traço</translation>
+    </message>
+    <message>
       <source>Undo</source>
       <translation>Desfazer</translation>
     </message>
@@ -119,8 +129,32 @@
       <translation>Salvar</translation>
     </message>
     <message>
-      <source>Annotations [a]</source>
-      <translation>Anotações [a]</translation>
+      <source>Reading mode</source>
+      <translation>Modo de leitura</translation>
+    </message>
+    <message>
+      <source>Light</source>
+      <translation>Claro</translation>
+    </message>
+    <message>
+      <source>Dark</source>
+      <translation>Escuro</translation>
+    </message>
+    <message>
+      <source>Sepia</source>
+      <translation>Sépia</translation>
+    </message>
+    <message>
+      <source>Burgundy</source>
+      <translation>Bordô</translation>
+    </message>
+    <message>
+      <source>Outline [Tab]</source>
+      <translation>Sumário [Tab]</translation>
+    </message>
+    <message>
+      <source>PDF documents (*.pdf)</source>
+      <translation>Documentos PDF (*.pdf)</translation>
     </message>
     <message>
       <source>Protected annotations</source>
@@ -129,10 +163,6 @@
     <message>
       <source>This PDF has no outline.</source>
       <translation>Este PDF não tem sumário.</translation>
-    </message>
-    <message>
-      <source>Could not render this page.</source>
-      <translation>Falha ao renderizar a página.</translation>
     </message>
     <message>
       <source>Page %1 / %2 · %3% · %4</source>
@@ -159,46 +189,6 @@
       <translation>O arquivo de anotações não pôde ser salvo. Descartar as alterações?</translation>
     </message>
     <message>
-      <source>Invalid page. Enter a number from 1 to %1.</source>
-      <translation>Página inválida. Use 1 a %1.</translation>
-    </message>
-    <message>
-      <source>Using Nightreader</source>
-      <translation>Como usar o Nightreader</translation>
-    </message>
-    <message>
-      <source>hjkl: scroll (j/k turn pages at the edge)
-J/K: next/previous page · H/L: previous/next chapter
-d/u: half a screen · gg/G: first/last page
-:123, :#123, :p 123 or :page 123 + Enter: go to page
-:c or :chapter: list chapters · :chapter 3: go to chapter
-:c next / :c prev: next/previous chapter
-Tab: toggle outline · a: annotation toolbar
-+/−: zoom · Esc: navigate/cancel · Ctrl+Z: undo the last annotation change
-
-Highlight: drag a rectangle. Draw: drag a freehand stroke.
-Text: drag a box and enter text. Eraser: click or drag over annotations.
-Annotations are saved to &lt;PDF&gt;.nightreader.json. The original PDF is never modified.
-Reading filters also transform images in the PDF.</source>
-      <translation>hjkl: rolar (j/k mudam de página na borda)
-J/K: próxima/página anterior · H/L: capítulo anterior/próximo
-d/u: meia tela · gg/G: primeira/última página
-:123, :#123, :p 123 ou :page 123 + Enter: ir para página
-:c ou :chapter: listar capítulos · :chapter 3: ir ao capítulo
-:c next / :c prev: próximo/capítulo anterior
-Tab: alternar sumário · a: barra de anotações
-+/−: zoom · Esc: navegar/cancelar · Ctrl+Z: desfazer a última alteração
-
-Grifo: arraste um retângulo. Desenho: arraste um traço livre.
-Texto: arraste uma caixa e digite. Borracha: clique ou arraste sobre anotações.
-Anotações são salvas em &lt;PDF&gt;.nightreader.json. O PDF original nunca é alterado.
-Os filtros de leitura também transformam imagens no PDF.</translation>
-    </message>
-    <message>
-      <source>:page 123 · :chapter 3 · :c to list chapters · Esc to cancel</source>
-      <translation>:page 123 · :chapter 3 · :c lista capítulos · Esc cancela</translation>
-    </message>
-    <message>
       <source>This PDF has no navigable chapters.</source>
       <translation>Este PDF não tem capítulos navegáveis.</translation>
     </message>
@@ -219,8 +209,20 @@ Os filtros de leitura também transformam imagens no PDF.</translation>
       <translation>Não há capítulo anterior.</translation>
     </message>
     <message>
+      <source>Usage: :q or :quit</source>
+      <translation>Use :q ou :quit</translation>
+    </message>
+    <message>
+      <source>Reading modes: light, dark, sepia, burgundy.</source>
+      <translation>Modos de leitura: light, dark, sepia, burgundy.</translation>
+    </message>
+    <message>
       <source>Invalid chapter. Enter a number from 1 to %1.</source>
       <translation>Capítulo inválido. Digite um número de 1 a %1.</translation>
+    </message>
+    <message>
+      <source>Invalid page. Enter a number from 1 to %1.</source>
+      <translation>Página inválida. Use 1 a %1.</translation>
     </message>
   </context>
   <context>

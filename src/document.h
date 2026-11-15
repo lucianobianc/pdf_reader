@@ -16,6 +16,8 @@ public:
     bool open(const QString &path, QString &error);
     int pageCount() const;
     QImage render(int page, double zoom) const;
+    QSizeF pageSize(int page) const;
+    static QSize rasterSize(QSizeF points, double zoom);
     QVector<Poppler::OutlineItem> outline() const;
     QVector<Chapter> chapters() const;
     QString path() const { return path_; }
