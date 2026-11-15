@@ -212,6 +212,11 @@ private slots:
     void viNavigationAndPanels() {
         ReaderWindow window;
         activate(window);
+        auto *dock = window.findChild<QDockWidget *>("outlineDock");
+        QVERIFY(!dock->isVisible());
+        QVERIFY(!dock->toggleViewAction()->isEnabled());
+        QTest::keyClick(&window, Qt::Key_Tab);
+        QVERIFY(!dock->isVisible());
         QVERIFY(window.openDocument(pdf_));
         QApplication::processEvents();
         auto *scroll = window.findChild<QScrollArea *>("pageScroll");
@@ -242,12 +247,12 @@ private slots:
         QVERIFY(scroll->verticalScrollBar()->value() > 0);
         QTest::keyClicks(scroll, "u");
         QCOMPARE(scroll->verticalScrollBar()->value(), 0);
-        auto *dock = window.findChild<QDockWidget *>("outlineDock");
-        QVERIFY(dock->isVisible());
+        QVERIFY(!dock->isVisible());
+        QVERIFY(!dock->toggleViewAction()->isEnabled());
         QTest::keyClick(scroll, Qt::Key_Tab);
         QVERIFY(!dock->isVisible());
         QTest::keyClick(scroll, Qt::Key_Tab);
-        QVERIFY(dock->isVisible());
+        QVERIFY(!dock->isVisible());
     }
     void addTextEraseUndoAndPreservePdf() {
         const QString path = directory_.filePath("interactive.pdf");
@@ -304,6 +309,14 @@ private slots:
         activate(window);
         QVERIFY(window.openDocument(path));
         QApplication::processEvents();
+        auto *dock = window.findChild<QDockWidget *>("outlineDock");
+        QVERIFY(dock->isVisible());
+        QVERIFY(dock->toggleViewAction()->isEnabled());
+        auto *scroll = window.findChild<DocumentView *>();
+        QTest::keyClick(scroll, Qt::Key_Tab);
+        QVERIFY(!dock->isVisible());
+        QTest::keyClick(scroll, Qt::Key_Tab);
+        QVERIFY(dock->isVisible());
         auto *tree = window.findChild<QTreeWidget *>();
         QCOMPARE(tree->topLevelItemCount(), 1);
         auto *chapter = tree->topLevelItem(0);
@@ -312,6 +325,13 @@ private slots:
         QTest::mouseClick(tree->viewport(), Qt::LeftButton, Qt::NoModifier,
             tree->visualItemRect(chapter->child(0)).center());
         QCOMPARE(window.currentPage(), 1);
+        QVERIFY(window.openDocument(pdf_));
+        QVERIFY(!dock->isVisible());
+        QVERIFY(!dock->toggleViewAction()->isEnabled());
+        QTest::keyClick(scroll, Qt::Key_Tab);
+        QVERIFY(!dock->isVisible());
+        QVERIFY(window.openDocument(path));
+        QVERIFY(dock->isVisible());
     }
     void fullPageKeysAndPageAliases() {
         ReaderWindow window;

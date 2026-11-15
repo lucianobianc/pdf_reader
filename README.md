@@ -83,6 +83,7 @@ Pages appear one below the other, so you can see the end of one and the beginnin
 of the next together. Use the mouse wheel or `j`/`k` to scroll continuously.
 `J` and `K` jump to the next or previous page.
 
+The outline sidebar opens automatically only when the PDF has an outline.
 Chapters follow the first level of the document outline. From within a chapter,
 `H` returns to its beginning; press it again to reach the preceding chapter.
 Subsections are accessible through the sidebar. Chapter navigation requires a

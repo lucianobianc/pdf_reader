@@ -46,6 +46,8 @@ ReaderWindow::ReaderWindow(QWidget *parent) : QMainWindow(parent)
     outlineTree_->setMinimumWidth(220);
     outlineDock_->setWidget(outlineTree_);
     addDockWidget(Qt::LeftDockWidgetArea, outlineDock_);
+    outlineDock_->hide();
+    outlineDock_->toggleViewAction()->setEnabled(false);
     connect(outlineTree_, &QTreeWidget::itemActivated, this, [this](QTreeWidgetItem *item) {
         const int destination = item->data(0, Qt::UserRole).toInt();
         if (destination >= 0) showPage(destination);
@@ -309,13 +311,10 @@ void ReaderWindow::populateOutline()
         }
     };
     append(document_.outline(), nullptr);
-    if (outlineTree_->topLevelItemCount() == 0) {
-        auto *empty = new QTreeWidgetItem(outlineTree_);
-        empty->setText(0, QStringLiteral("This PDF has no outline."));
-        empty->setData(0, Qt::UserRole, -1);
-        empty->setFlags(Qt::NoItemFlags);
-    }
-    outlineTree_->expandToDepth(0);
+    const bool hasOutline = outlineTree_->topLevelItemCount() > 0;
+    outlineDock_->toggleViewAction()->setEnabled(hasOutline);
+    outlineDock_->setVisible(hasOutline);
+    if (hasOutline) outlineTree_->expandToDepth(0);
 }
 
 void ReaderWindow::showPage(int page, bool bottom)
@@ -630,7 +629,10 @@ bool ReaderWindow::eventFilter(QObject *object, QEvent *event)
     else if (text == "-") setZoom(zoom_ - 0.25);
     else if (text == "a") showAnnotationTools(scroll_->viewport()->mapToGlobal(scroll_->viewport()->rect().center()));
     else if (text == "t") applyTheme((readingTheme_ + 1) % 4);
-    else if (key->key() == Qt::Key_Tab) outlineDock_->setVisible(!outlineDock_->isVisible());
+    else if (key->key() == Qt::Key_Tab) {
+        if (outlineDock_->toggleViewAction()->isEnabled())
+            outlineDock_->setVisible(!outlineDock_->isVisible());
+    }
     else if (text == "?") {
         helpAction_->trigger();
     } else return false;
