@@ -9,9 +9,9 @@
 int main(int argc, char **argv)
 {
     QApplication app(argc, argv);
-    QApplication::setApplicationName("Vireo");
+    QApplication::setApplicationName("Nightreader");
     QApplication::setApplicationVersion("0.1.0");
-    QApplication::setOrganizationName("Vireo");
+    QApplication::setOrganizationName("Nightreader");
     QCommandLineParser parser;
     parser.setApplicationDescription("A PDF reader with vi navigation and separate annotations.");
     parser.addHelpOption();
@@ -26,8 +26,8 @@ int main(int argc, char **argv)
     if (qtTranslation.load(locale, "qtbase", "_", QLibraryInfo::path(QLibraryInfo::TranslationsPath)))
         app.installTranslator(&qtTranslation);
     for (const auto &directory : {QCoreApplication::applicationDirPath() + "/translations",
-            QDir(QCoreApplication::applicationDirPath()).filePath("../share/vireo/translations")}) {
-        if (applicationTranslation.load(locale, "vireo", "_", directory)) {
+            QDir(QCoreApplication::applicationDirPath()).filePath("../share/nightreader/translations")}) {
+        if (applicationTranslation.load(locale, "nightreader", "_", directory)) {
             app.installTranslator(&applicationTranslation);
             break;
         }

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(vireo VERSION 0.1.0 LANGUAGES CXX)
+project(nightreader VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
@@ -11,8 +11,8 @@ add_library(reader_core src/document.cpp src/annotations.cpp src/page_canvas.cpp
 target_include_directories(reader_core PUBLIC src)
 target_link_libraries(reader_core PUBLIC Qt6::Widgets PkgConfig::Poppler)
 target_compile_options(reader_core PRIVATE -Wall -Wextra -Wpedantic)
-add_executable(vireo src/main.cpp)
-target_link_libraries(vireo PRIVATE reader_core)
+add_executable(nightreader src/main.cpp)
+target_link_libraries(nightreader PRIVATE reader_core)
 include(CTest)
 if(BUILD_TESTING)
   find_package(Qt6 REQUIRED COMPONENTS Test)
@@ -21,15 +21,15 @@ if(BUILD_TESTING)
   add_test(NAME reader_tests COMMAND reader_tests)
   set_tests_properties(reader_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
 endif()
-install(TARGETS vireo RUNTIME DESTINATION bin)
+install(TARGETS nightreader RUNTIME DESTINATION bin)
 
 # English source strings work without LinguistTools; catalogs are optional.
 if(TARGET Qt6::lrelease)
-  set(translation_file "${CMAKE_CURRENT_BINARY_DIR}/translations/vireo_pt_BR.qm")
+  set(translation_file "${CMAKE_CURRENT_BINARY_DIR}/translations/nightreader_pt_BR.qm")
   add_custom_command(OUTPUT "${translation_file}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/translations"
-    COMMAND Qt6::lrelease "${CMAKE_CURRENT_SOURCE_DIR}/translations/vireo_pt_BR.ts" -qm "${translation_file}"
-    DEPENDS translations/vireo_pt_BR.ts VERBATIM)
+    COMMAND Qt6::lrelease "${CMAKE_CURRENT_SOURCE_DIR}/translations/nightreader_pt_BR.ts" -qm "${translation_file}"
+    DEPENDS translations/nightreader_pt_BR.ts VERBATIM)
   add_custom_target(translations ALL DEPENDS "${translation_file}")
-  install(FILES "${translation_file}" DESTINATION share/vireo/translations)
+  install(FILES "${translation_file}" DESTINATION share/nightreader/translations)
 endif()

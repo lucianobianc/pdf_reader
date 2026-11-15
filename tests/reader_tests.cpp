@@ -114,7 +114,7 @@ private slots:
         };
         QString error;
         QVERIFY2(original.save(path, "fingerprint", error), qPrintable(error));
-        const QByteArray before = contents(path + ".vireo.json");
+        const QByteArray before = contents(path + ".nightreader.json");
         AnnotationStore loaded;
         QVERIFY(loaded.load(path, "fingerprint", 3, error));
         QCOMPARE(loaded.items.size(), 3);
@@ -123,9 +123,34 @@ private slots:
         QCOMPARE(loaded.items[0].color, original.items[0].color);
         QVERIFY(!loaded.load(path, "different-document", 3, error));
         QVERIFY(loaded.items.isEmpty());
-        QCOMPARE(contents(path + ".vireo.json"), before);
+        QCOMPARE(contents(path + ".nightreader.json"), before);
         QVERIFY(!loaded.load(path, "fingerprint", 1, error));
         QVERIFY(!original.save(directory_.filePath("missing/marks.pdf"), "fingerprint", error));
+    }
+    void legacyAnnotationFiles() {
+        const QString path = directory_.filePath("legacy.pdf");
+        AnnotationStore original;
+        original.items = {{0, Annotation::Kind::Text, QColor("blue"), .022,
+            {{.1, .1}, {.5, .4}}, "Existing note"}};
+        QString error;
+        QVERIFY(original.save(path, "fingerprint", error));
+        QVERIFY(QFile::rename(path + ".nightreader.json", path + ".vireo.json"));
+        const auto legacyContents = contents(path + ".vireo.json");
+        AnnotationStore loaded;
+        QVERIFY(loaded.load(path, "fingerprint", 1, error));
+        QCOMPARE(loaded.items.size(), 1);
+        QCOMPARE(loaded.items[0].text, QString("Existing note"));
+        loaded.items[0].text = "Updated note";
+        QVERIFY(loaded.save(path, "fingerprint", error));
+        QCOMPARE(contents(path + ".vireo.json"), legacyContents);
+        QVERIFY(loaded.load(path, "fingerprint", 1, error));
+        QCOMPARE(loaded.items[0].text, QString("Updated note"));
+        QFile corrupted(path + ".nightreader.json");
+        QVERIFY(corrupted.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        corrupted.write("invalid json");
+        corrupted.close();
+        QVERIFY(!loaded.load(path, "fingerprint", 1, error));
+        QVERIFY(loaded.items.isEmpty()); // Never silently fall back to stale notes.
     }
     void readingThemes() {
         QImage source(2, 1, QImage::Format_RGB32);
@@ -415,7 +440,7 @@ private slots:
     }
     void portugueseCatalog() {
         QTranslator translator;
-        const auto catalog = QCoreApplication::applicationDirPath() + "/translations/vireo_pt_BR.qm";
+        const auto catalog = QCoreApplication::applicationDirPath() + "/translations/nightreader_pt_BR.qm";
         if (!QFile::exists(catalog)) QSKIP("Optional translation tools not installed");
         QVERIFY(translator.load(catalog));
         qApp->installTranslator(&translator);

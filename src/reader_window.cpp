@@ -27,7 +27,7 @@
 
 ReaderWindow::ReaderWindow(QWidget *parent) : QMainWindow(parent)
 {
-    setWindowTitle(tr("Vireo — PDF reader"));
+    setWindowTitle(tr("Nightreader — PDF reader"));
     resize(1100, 800);
     canvas_ = new PageCanvas;
     scroll_ = new QScrollArea(this);
@@ -114,7 +114,7 @@ void ReaderWindow::createToolbar()
     });
     helpAction_ = toolbar->addAction(tr("Help [?]"));
     connect(helpAction_, &QAction::triggered, this, [this] {
-        QMessageBox::information(this, tr("Using Vireo"),
+        QMessageBox::information(this, tr("Using Nightreader"),
             tr("hjkl: scroll (j/k turn pages at the edge)\n"
                "J/K: next/previous page · H/L: previous/next chapter\n"
                "d/u: half a screen · gg/G: first/last page\n"
@@ -126,7 +126,7 @@ void ReaderWindow::createToolbar()
                "\n"
                "Highlight: drag a rectangle. Draw: drag a freehand stroke.\n"
                "Text: drag a box and enter text. Eraser: click or drag over annotations.\n"
-               "Annotations are saved to <PDF>.vireo.json. The original PDF is never modified.\n"
+               "Annotations are saved to <PDF>.nightreader.json. The original PDF is never modified.\n"
                "Reading filters also transform images in the PDF."));
     });
     addToolBarBreak();
@@ -188,7 +188,7 @@ bool ReaderWindow::openDocument(const QString &path)
     if (!annotationsWritable_) QMessageBox::warning(this, tr("Protected annotations"), error);
     chapters_ = document_.chapters();
     populateOutline();
-    setWindowTitle(QFileInfo(path).fileName() + " — Vireo");
+    setWindowTitle(QFileInfo(path).fileName() + " — Nightreader");
     canvas_->setAnnotations(annotations_.items);
     showPage(0);
     return true;

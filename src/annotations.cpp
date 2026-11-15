@@ -9,7 +9,10 @@
 bool AnnotationStore::load(const QString &path, const QString &fingerprint, int pageCount, QString &error)
 {
     items.clear();
-    QFile file(path + ".vireo.json");
+    QFile file(path + ".nightreader.json");
+    // Read annotations from earlier versions when no file with the current name exists.
+    // Saving always uses the current name and leaves the legacy file intact.
+    if (!file.exists()) file.setFileName(path + ".vireo.json");
     if (!file.exists()) return true;
     if (!file.open(QIODevice::ReadOnly) || file.size() > 32 * 1024 * 1024) {
         error = tr("Could not read the annotation file (limit: 32 MB).");
@@ -67,7 +70,7 @@ bool AnnotationStore::save(const QString &path, const QString &fingerprint, QStr
                 mark.kind == Annotation::Kind::Text ? "text" : "ink"},
             {"text", mark.text}, {"color", mark.color.name(QColor::HexArgb)}, {"width", mark.width}, {"points", points}});
     }
-    QSaveFile file(path + ".vireo.json");
+    QSaveFile file(path + ".nightreader.json");
     const QByteArray data = QJsonDocument(QJsonObject{{"version", 1}, {"sha256", fingerprint},
         {"annotations", marks}}).toJson();
     if (data.size() > 32 * 1024 * 1024) {

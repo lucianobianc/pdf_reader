@@ -3,8 +3,8 @@
   <context>
     <name>ReaderWindow</name>
     <message>
-      <source>Vireo — PDF reader</source>
-      <translation>Vireo — leitor de PDF</translation>
+      <source>Nightreader — PDF reader</source>
+      <translation>Nightreader — leitor de PDF</translation>
     </message>
     <message>
       <source>Document outline</source>
@@ -163,8 +163,8 @@
       <translation>Página inválida. Use 1 a %1.</translation>
     </message>
     <message>
-      <source>Using Vireo</source>
-      <translation>Como usar o Vireo</translation>
+      <source>Using Nightreader</source>
+      <translation>Como usar o Nightreader</translation>
     </message>
     <message>
       <source>hjkl: scroll (j/k turn pages at the edge)
@@ -178,7 +178,7 @@ Tab: toggle outline · a: annotation toolbar
 
 Highlight: drag a rectangle. Draw: drag a freehand stroke.
 Text: drag a box and enter text. Eraser: click or drag over annotations.
-Annotations are saved to &lt;PDF&gt;.vireo.json. The original PDF is never modified.
+Annotations are saved to &lt;PDF&gt;.nightreader.json. The original PDF is never modified.
 Reading filters also transform images in the PDF.</source>
       <translation>hjkl: rolar (j/k mudam de página na borda)
 J/K: próxima/página anterior · H/L: capítulo anterior/próximo
@@ -191,7 +191,7 @@ Tab: alternar sumário · a: barra de anotações
 
 Grifo: arraste um retângulo. Desenho: arraste um traço livre.
 Texto: arraste uma caixa e digite. Borracha: clique ou arraste sobre anotações.
-Anotações são salvas em &lt;PDF&gt;.vireo.json. O PDF original nunca é alterado.
+Anotações são salvas em &lt;PDF&gt;.nightreader.json. O PDF original nunca é alterado.
 Os filtros de leitura também transformam imagens no PDF.</translation>
     </message>
     <message>
