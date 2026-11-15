@@ -44,6 +44,22 @@ make install PREFIX=/your/install/path
 Use `make clean` to remove build outputs. It leaves installed files in place.
 You can also build, install, and clean in one step: `make install clean`.
 
+## Desktop integration
+
+After `make install`, Nightreader appears in application menus and launchers such
+as XFCE's App Finder. It is also available under **Open With** for PDF files.
+
+To use it as your default PDF reader, select Nightreader in your file manager's
+**Open With** settings, or run:
+
+```sh
+xdg-mime default nightreader.desktop application/pdf
+```
+
+The launcher works without adding `~/.local/bin` to your `PATH`. If you install
+with a custom `PREFIX`, its `share` directory must be in `XDG_DATA_DIRS` for menus
+to find the application.
+
 ## Keyboard navigation
 
 | Key | Action |

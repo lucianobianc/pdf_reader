@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Nightreader
+GenericName=PDF Reader
+Comment=Read and annotate PDFs with vi-style navigation and night modes
+Exec="@NIGHTREADER_DESKTOP_EXEC@" %f
+Icon=nightreader
+Terminal=false
+Categories=Office;Viewer;
+MimeType=application/pdf;
+Keywords=PDF;Reader;Night;
+StartupNotify=true
+StartupWMClass=Nightreader

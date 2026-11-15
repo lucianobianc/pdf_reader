@@ -1,6 +1,7 @@
 #include "reader_window.h"
 #include <QApplication>
 #include <QCommandLineParser>
+#include <QIcon>
 
 int main(int argc, char **argv)
 {
@@ -8,6 +9,8 @@ int main(int argc, char **argv)
     QApplication::setApplicationName("Nightreader");
     QApplication::setApplicationVersion("0.1.0");
     QApplication::setOrganizationName("Nightreader");
+    QApplication::setDesktopFileName("nightreader");
+    QApplication::setWindowIcon(QIcon::fromTheme("nightreader", QIcon(":/icons/nightreader.png")));
     QCommandLineParser parser;
     parser.setApplicationDescription("A PDF reader with vi navigation and separate annotations.");
     parser.addHelpOption();

@@ -6,8 +6,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config qt6-base-dev libpoppler-qt6-dev
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config qt6-base-dev libpoppler-qt6-dev desktop-file-utils
       - name: Build and test
         run: make test BUILD_TYPE=Debug
-      - name: Install and clean
-        run: make install clean BUILD_TYPE=Debug PREFIX="$RUNNER_TEMP/nightreader"
+      - name: Install, validate desktop entry and clean
+        run: |
+          make install clean BUILD_TYPE=Debug PREFIX="$RUNNER_TEMP/nightreader"
+          desktop-file-validate "$RUNNER_TEMP/nightreader/share/applications/nightreader.desktop"
