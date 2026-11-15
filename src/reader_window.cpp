@@ -342,9 +342,10 @@ void ReaderWindow::updateStatus()
         position_->setText(QStringLiteral("Open a PDF with :open or Ctrl+O · :help for help"));
         return;
     }
-    position_->setText(QString(QStringLiteral("Page %1 / %2 · %3% · %4"))
-        .arg(page_ + 1).arg(document_.pageCount()).arg(qRound(zoom_ * 100))
-        .arg(dirty_ ? QStringLiteral("unsaved annotations") : QStringLiteral("annotations saved separately")));
+    QString status = QStringLiteral("Page %1 / %2 · %3%")
+        .arg(page_ + 1).arg(document_.pageCount()).arg(qRound(zoom_ * 100));
+    if (dirty_) status += QStringLiteral(" · unsaved annotations");
+    position_->setText(status);
 }
 
 bool ReaderWindow::saveAnnotations(bool force)
