@@ -15,7 +15,7 @@ bool AnnotationStore::load(const QString &path, const QString &fingerprint, int 
     if (!file.exists()) file.setFileName(path + ".vireo.json");
     if (!file.exists()) return true;
     if (!file.open(QIODevice::ReadOnly) || file.size() > 32 * 1024 * 1024) {
-        error = tr("Could not read the annotation file (limit: 32 MB).");
+        error = QStringLiteral("Could not read the annotation file (limit: 32 MB).");
         return false;
     }
     QJsonParseError parseError;
@@ -23,7 +23,7 @@ bool AnnotationStore::load(const QString &path, const QString &fingerprint, int 
     const auto root = json.object();
     if (parseError.error != QJsonParseError::NoError || root["version"].toInt() != 1 ||
         root["sha256"].toString() != fingerprint || !root["annotations"].isArray()) {
-        error = tr("The annotation file is invalid or belongs to another PDF. It will not be overwritten.");
+        error = QStringLiteral("The annotation file is invalid or belongs to another PDF. It will not be overwritten.");
         return false;
     }
     QVector<Annotation> loaded;
@@ -50,7 +50,7 @@ bool AnnotationStore::load(const QString &path, const QString &fingerprint, int 
         valid = valid && (mark.kind != Annotation::Kind::Ink ? mark.points.size() == 2 : mark.points.size() >= 2)
             && (mark.kind != Annotation::Kind::Text || (!mark.text.trimmed().isEmpty() && mark.text.size() <= 10000));
         if (!valid) {
-            error = tr("The annotations contain invalid data. The file will not be overwritten.");
+            error = QStringLiteral("The annotations contain invalid data. The file will not be overwritten.");
             return false;
         }
         loaded.append(mark);
@@ -74,11 +74,11 @@ bool AnnotationStore::save(const QString &path, const QString &fingerprint, QStr
     const QByteArray data = QJsonDocument(QJsonObject{{"version", 1}, {"sha256", fingerprint},
         {"annotations", marks}}).toJson();
     if (data.size() > 32 * 1024 * 1024) {
-        error = tr("Could not save annotations: ") + tr("The annotation file exceeds the 32 MB limit.");
+        error = QStringLiteral("Could not save annotations: ") + QStringLiteral("The annotation file exceeds the 32 MB limit.");
         return false;
     }
     if (!file.open(QIODevice::WriteOnly) || file.write(data) != data.size() || !file.commit()) {
-        error = tr("Could not save annotations: ") + file.errorString();
+        error = QStringLiteral("Could not save annotations: ") + file.errorString();
         return false;
     }
     return true;

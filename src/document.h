@@ -1,5 +1,4 @@
 #pragma once
-#include <QCoreApplication>
 #include <QImage>
 #include <QString>
 #include <memory>
@@ -11,7 +10,6 @@ struct Chapter {
 };
 
 class Document {
-    Q_DECLARE_TR_FUNCTIONS(Document)
 public:
     bool open(const QString &path, QString &error);
     int pageCount() const;

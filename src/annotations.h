@@ -1,6 +1,6 @@
 #pragma once
-#include <QCoreApplication>
 #include <QColor>
+#include <QMetaType>
 #include <QPointF>
 #include <QString>
 #include <QVector>
@@ -17,7 +17,6 @@ struct Annotation {
 };
 
 class AnnotationStore {
-    Q_DECLARE_TR_FUNCTIONS(AnnotationStore)
 public:
     QVector<Annotation> items;
     bool load(const QString &pdfPath, const QString &fingerprint, int pageCount, QString &error);

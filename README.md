@@ -16,13 +16,13 @@ bindings, and pkg-config.
 On Debian / Ubuntu:
 
 ```sh
-sudo apt install build-essential cmake ninja-build pkg-config qt6-base-dev libpoppler-qt6-dev qt6-tools-dev qt6-l10n-tools
+sudo apt install build-essential cmake ninja-build pkg-config qt6-base-dev libpoppler-qt6-dev
 ```
 
 On FreeBSD:
 
 ```sh
-sudo pkg install cmake ninja pkgconf qt6-base qt6-tools poppler-qt6
+sudo pkg install cmake ninja pkgconf qt6-base poppler-qt6
 ```
 
 From the repository directory:

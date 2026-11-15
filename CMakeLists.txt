@@ -7,7 +7,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 find_package(Qt6 6.2 REQUIRED COMPONENTS Widgets)
-find_package(Qt6 OPTIONAL_COMPONENTS LinguistTools)
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(Poppler REQUIRED IMPORTED_TARGET poppler-qt6)
 add_library(reader_core src/document.cpp src/annotations.cpp src/page_canvas.cpp src/document_view.cpp src/icons.cpp src/reader_window.cpp)
@@ -25,14 +24,3 @@ if(BUILD_TESTING)
   set_tests_properties(reader_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)
 endif()
 install(TARGETS nightreader RUNTIME DESTINATION bin)
-
-# English source strings work without LinguistTools; catalogs are optional.
-if(TARGET Qt6::lrelease)
-  set(translation_file "${CMAKE_CURRENT_BINARY_DIR}/translations/nightreader_pt_BR.qm")
-  add_custom_command(OUTPUT "${translation_file}"
-    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/translations"
-    COMMAND Qt6::lrelease "${CMAKE_CURRENT_SOURCE_DIR}/translations/nightreader_pt_BR.ts" -qm "${translation_file}"
-    DEPENDS translations/nightreader_pt_BR.ts VERBATIM)
-  add_custom_target(translations ALL DEPENDS "${translation_file}")
-  install(FILES "${translation_file}" DESTINATION share/nightreader/translations)
-endif()

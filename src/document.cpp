@@ -8,13 +8,13 @@ bool Document::open(const QString &path, QString &error)
 {
     auto candidate = Poppler::Document::load(path);
     if (!candidate || candidate->isLocked() || candidate->numPages() == 0) {
-        error = tr("Could not open the PDF. Check that it is valid and does not require a password.");
+        error = QStringLiteral("Could not open the PDF. Check that it is valid and does not require a password.");
         return false;
     }
     QFile file(path);
     QCryptographicHash hash(QCryptographicHash::Sha256);
     if (!file.open(QIODevice::ReadOnly) || !hash.addData(&file)) {
-        error = tr("Could not read the document.");
+        error = QStringLiteral("Could not read the document.");
         return false;
     }
     candidate->setRenderHint(Poppler::Document::Antialiasing);

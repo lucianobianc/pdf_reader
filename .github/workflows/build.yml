@@ -6,7 +6,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
-        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config qt6-base-dev libpoppler-qt6-dev qt6-tools-dev qt6-l10n-tools
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build pkg-config qt6-base-dev libpoppler-qt6-dev
       - name: Build and test
         run: make test BUILD_TYPE=Debug
       - name: Install and clean

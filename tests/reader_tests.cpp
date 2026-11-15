@@ -30,7 +30,6 @@
 #include <QTemporaryDir>
 #include <QTest>
 #include <QTimer>
-#include <QTranslator>
 #include <QTreeWidget>
 #include <functional>
 
@@ -722,17 +721,7 @@ private slots:
         QVERIFY(empty.isVisible());
         QVERIFY(empty.statusBar()->currentMessage().contains("Open a PDF"));
     }
-    void portugueseCatalog() {
-        QTranslator translator;
-        const auto catalog = QCoreApplication::applicationDirPath() + "/translations/nightreader_pt_BR.qm";
-        if (!QFile::exists(catalog)) QSKIP("Optional translation tools not installed");
-        QVERIFY(translator.load(catalog));
-        qApp->installTranslator(&translator);
-        ReaderWindow window;
-        QVERIFY(action(window, "Borracha"));
-        QVERIFY(action(window, "Abrir PDF"));
-        qApp->removeTranslator(&translator);
-    }
+
 };
 QTEST_MAIN(ReaderTests)
 #include "reader_tests.moc"

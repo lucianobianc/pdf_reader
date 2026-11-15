@@ -34,12 +34,12 @@
 
 ReaderWindow::ReaderWindow(QWidget *parent) : QMainWindow(parent)
 {
-    setWindowTitle(tr("Nightreader — PDF reader"));
+    setWindowTitle(QStringLiteral("Nightreader — PDF reader"));
     resize(1100, 800);
     view_ = new DocumentView(this);
     scroll_ = view_;
     setCentralWidget(scroll_);
-    outlineDock_ = new QDockWidget(tr("Document outline"), this);
+    outlineDock_ = new QDockWidget(QStringLiteral("Document outline"), this);
     outlineDock_->setObjectName("outlineDock");
     outlineTree_ = new QTreeWidget(outlineDock_);
     outlineTree_->setHeaderHidden(true);
@@ -58,10 +58,10 @@ ReaderWindow::ReaderWindow(QWidget *parent) : QMainWindow(parent)
     createAnnotationTools();
     command_ = new QLineEdit(this);
     command_->setObjectName("pageCommand");
-    command_->setPlaceholderText(tr(":page 123 · :chapter 3 · :c to list chapters · Esc to cancel"));
+    command_->setPlaceholderText(QStringLiteral(":page 123 · :chapter 3 · :c to list chapters · Esc to cancel"));
     command_->hide();
     statusBar()->addPermanentWidget(command_, 1);
-    position_ = new QLabel(tr("Open a PDF with :open or Ctrl+O · :help for help"), this);
+    position_ = new QLabel(QStringLiteral("Open a PDF with :open or Ctrl+O · :help for help"), this);
     statusBar()->addPermanentWidget(position_);
     connect(command_, &QLineEdit::returnPressed, this, &ReaderWindow::executeCommand);
     connect(view_, &DocumentView::annotationCreated, this, &ReaderWindow::addAnnotation);
@@ -69,11 +69,11 @@ ReaderWindow::ReaderWindow(QWidget *parent) : QMainWindow(parent)
     connect(view_, &DocumentView::textBoxRequested, this, [this](Annotation box) {
         if (!annotationsWritable_) return;
         bool accepted = false;
-        const QString text = QInputDialog::getMultiLineText(this, tr("Text box"),
-            tr("Text (up to 10,000 characters):"), {}, &accepted);
+        const QString text = QInputDialog::getMultiLineText(this, QStringLiteral("Text box"),
+            QStringLiteral("Text (up to 10,000 characters):"), {}, &accepted);
         if (!accepted || text.trimmed().isEmpty()) return;
         if (text.size() > 10000) {
-            QMessageBox::warning(this, tr("Text box"), tr("The text exceeds the 10,000 character limit."));
+            QMessageBox::warning(this, QStringLiteral("Text box"), QStringLiteral("The text exceeds the 10,000 character limit."));
             return;
         }
         box.text = text;
@@ -84,7 +84,7 @@ ReaderWindow::ReaderWindow(QWidget *parent) : QMainWindow(parent)
         updateStatus();
     });
     connect(view_, &DocumentView::renderFailed, this, [this] {
-        statusBar()->showMessage(tr("Could not render this page."), 5000);
+        statusBar()->showMessage(QStringLiteral("Could not render this page."), 5000);
     });
     connect(view_, &DocumentView::annotationToolsRequested, this, &ReaderWindow::showAnnotationTools);
     qApp->installEventFilter(this);
@@ -92,16 +92,16 @@ ReaderWindow::ReaderWindow(QWidget *parent) : QMainWindow(parent)
 
 void ReaderWindow::createActions()
 {
-    auto *open = new QAction(tr("Open PDF"), this);
+    auto *open = new QAction(QStringLiteral("Open PDF"), this);
     open->setShortcut(QKeySequence::Open);
     addAction(open);
     connect(open, &QAction::triggered, this, &ReaderWindow::openFilePicker);
-    helpAction_ = new QAction(tr("Help [?]"), this);
+    helpAction_ = new QAction(QStringLiteral("Help [?]"), this);
     addAction(helpAction_);
     connect(helpAction_, &QAction::triggered, this, [this] {
         annotationMenu_->hide();
-        QMessageBox::information(this, tr("Using Nightreader"),
-            tr("hjkl: scroll continuously · J/K: next/previous page\n"
+        QMessageBox::information(this, QStringLiteral("Using Nightreader"),
+            QStringLiteral("hjkl: scroll continuously · J/K: next/previous page\n"
                "H/L: previous/next chapter · d/u: half a screen · gg/G: first/last page\n"
                ":12, :#12, :p 12 or :page 12: go to page\n"
                ":c or :chapter: list chapters · :c 3: go to chapter\n"
@@ -153,30 +153,30 @@ void ReaderWindow::createAnnotationTools()
         });
         return action;
     };
-    navigateAction_ = addTool(tr("Navigate [Esc]"), PageCanvas::Tool::Navigate, 0);
+    navigateAction_ = addTool(QStringLiteral("Navigate [Esc]"), PageCanvas::Tool::Navigate, 0);
     navigateAction_->setChecked(true);
-    addTool(tr("Highlight"), PageCanvas::Tool::Highlight, 1);
-    addTool(tr("Draw"), PageCanvas::Tool::Ink, 2);
-    addTool(tr("Text"), PageCanvas::Tool::Text, 3);
-    addTool(tr("Eraser"), PageCanvas::Tool::Eraser, 4);
-    auto *color = new QAction(tr("Color…"), this);
+    addTool(QStringLiteral("Highlight"), PageCanvas::Tool::Highlight, 1);
+    addTool(QStringLiteral("Draw"), PageCanvas::Tool::Ink, 2);
+    addTool(QStringLiteral("Text"), PageCanvas::Tool::Text, 3);
+    addTool(QStringLiteral("Eraser"), PageCanvas::Tool::Eraser, 4);
+    auto *color = new QAction(QStringLiteral("Color…"), this);
     addButton(color, ReaderIcon::Color, 1, 0);
     annotationActions_.append(color);
     connect(color, &QAction::triggered, this, [this] {
         annotationMenu_->hide();
-        const auto selected = QColorDialog::getColor(annotationColor_, this, tr("Annotation color"));
+        const auto selected = QColorDialog::getColor(annotationColor_, this, QStringLiteral("Annotation color"));
         if (selected.isValid()) { annotationColor_ = selected; view_->setColor(selected); }
     });
     strokeSelector_ = new QComboBox(body);
     strokeSelector_->setObjectName("strokeWidth");
-    for (const auto &name : {tr("Thin stroke"), tr("Medium stroke"), tr("Thick stroke")}) {
+    for (const auto &name : {QStringLiteral("Thin stroke"), QStringLiteral("Medium stroke"), QStringLiteral("Thick stroke")}) {
         strokeSelector_->addItem(QString{});
         const int index = strokeSelector_->count() - 1;
         strokeSelector_->setItemData(index, name, Qt::ToolTipRole);
         strokeSelector_->setItemData(index, name, Qt::AccessibleTextRole);
     }
-    strokeSelector_->setAccessibleName(tr("Stroke thickness"));
-    strokeSelector_->setToolTip(tr("Stroke thickness"));
+    strokeSelector_->setAccessibleName(QStringLiteral("Stroke thickness"));
+    strokeSelector_->setToolTip(QStringLiteral("Stroke thickness"));
     strokeSelector_->setIconSize(QSize(24, 24));
     strokeSelector_->setCurrentIndex(1);
     layout->addWidget(strokeSelector_, 1, 1, 1, 2);
@@ -186,13 +186,13 @@ void ReaderWindow::createAnnotationTools()
         strokeSelector_->setToolTip(name);
         strokeSelector_->setAccessibleDescription(name);
     });
-    auto *undoAction = new QAction(tr("Undo"), this);
+    auto *undoAction = new QAction(QStringLiteral("Undo"), this);
     undoAction->setShortcut(QKeySequence::Undo);
     addAction(undoAction);
     addButton(undoAction, ReaderIcon::Undo, 1, 3);
     annotationActions_.append(undoAction);
     connect(undoAction, &QAction::triggered, this, [this] { annotationMenu_->hide(); undo(); });
-    auto *save = new QAction(tr("Save"), this);
+    auto *save = new QAction(QStringLiteral("Save"), this);
     save->setShortcut(QKeySequence::Save);
     addAction(save);
     addButton(save, ReaderIcon::Save, 1, 4);
@@ -200,23 +200,23 @@ void ReaderWindow::createAnnotationTools()
     connect(save, &QAction::triggered, this, [this] { annotationMenu_->hide(); saveAnnotations(true); });
     readingModeIcon_ = new QLabel(body);
     readingModeIcon_->setAlignment(Qt::AlignCenter);
-    readingModeIcon_->setToolTip(tr("Reading mode"));
+    readingModeIcon_->setToolTip(QStringLiteral("Reading mode"));
     layout->addWidget(readingModeIcon_, 2, 0);
     themeSelector_ = new QComboBox(body);
     themeSelector_->setObjectName("readingTheme");
-    for (const auto &name : {tr("Light"), tr("Dark"), tr("Sepia"), tr("Burgundy")}) {
+    for (const auto &name : {QStringLiteral("Light"), QStringLiteral("Dark"), QStringLiteral("Sepia"), QStringLiteral("Burgundy")}) {
         themeSelector_->addItem(QString{});
         const int index = themeSelector_->count() - 1;
         themeSelector_->setItemData(index, name, Qt::ToolTipRole);
         themeSelector_->setItemData(index, name, Qt::AccessibleTextRole);
     }
-    themeSelector_->setAccessibleName(tr("Reading mode"));
-    themeSelector_->setToolTip(tr("Reading mode"));
+    themeSelector_->setAccessibleName(QStringLiteral("Reading mode"));
+    themeSelector_->setToolTip(QStringLiteral("Reading mode"));
     themeSelector_->setIconSize(QSize(24, 24));
     layout->addWidget(themeSelector_, 2, 1, 1, 2);
     connect(themeSelector_, &QComboBox::currentIndexChanged, this, &ReaderWindow::applyTheme);
     auto *outline = outlineDock_->toggleViewAction();
-    outline->setText(tr("Outline [Tab]"));
+    outline->setText(QStringLiteral("Outline [Tab]"));
     addButton(outline, ReaderIcon::Outline, 2, 3);
     addButton(helpAction_, ReaderIcon::Help, 2, 4);
     auto *contents = new QWidgetAction(annotationMenu_);
@@ -267,7 +267,7 @@ void ReaderWindow::updateToolIcons(QColor foreground)
 
 void ReaderWindow::openFilePicker()
 {
-    const auto path = QFileDialog::getOpenFileName(this, tr("Open PDF"), {}, tr("PDF documents (*.pdf)"));
+    const auto path = QFileDialog::getOpenFileName(this, QStringLiteral("Open PDF"), {}, QStringLiteral("PDF documents (*.pdf)"));
     if (!path.isEmpty()) openDocument(path);
 }
 
@@ -276,7 +276,7 @@ bool ReaderWindow::openDocument(const QString &path)
     if (!confirmUnsavedChanges()) return false;
     QString error;
     if (!document_.open(path, error)) {
-        QMessageBox::warning(this, tr("Open PDF"), error);
+        QMessageBox::warning(this, QStringLiteral("Open PDF"), error);
         return false;
     }
     dirty_ = false;
@@ -285,7 +285,7 @@ bool ReaderWindow::openDocument(const QString &path)
     for (auto *action : annotationActions_) action->setEnabled(annotationsWritable_);
     strokeSelector_->setEnabled(annotationsWritable_);
     navigateAction_->trigger();
-    if (!annotationsWritable_) QMessageBox::warning(this, tr("Protected annotations"), error);
+    if (!annotationsWritable_) QMessageBox::warning(this, QStringLiteral("Protected annotations"), error);
     chapters_ = document_.chapters();
     populateOutline();
     setWindowTitle(QFileInfo(path).fileName() + " — Nightreader");
@@ -311,7 +311,7 @@ void ReaderWindow::populateOutline()
     append(document_.outline(), nullptr);
     if (outlineTree_->topLevelItemCount() == 0) {
         auto *empty = new QTreeWidgetItem(outlineTree_);
-        empty->setText(0, tr("This PDF has no outline."));
+        empty->setText(0, QStringLiteral("This PDF has no outline."));
         empty->setData(0, Qt::UserRole, -1);
         empty->setFlags(Qt::NoItemFlags);
     }
@@ -339,23 +339,23 @@ void ReaderWindow::setZoom(double zoom)
 void ReaderWindow::updateStatus()
 {
     if (document_.pageCount() == 0) {
-        position_->setText(tr("Open a PDF with :open or Ctrl+O · :help for help"));
+        position_->setText(QStringLiteral("Open a PDF with :open or Ctrl+O · :help for help"));
         return;
     }
-    position_->setText(QString(tr("Page %1 / %2 · %3% · %4"))
+    position_->setText(QString(QStringLiteral("Page %1 / %2 · %3% · %4"))
         .arg(page_ + 1).arg(document_.pageCount()).arg(qRound(zoom_ * 100))
-        .arg(dirty_ ? tr("unsaved annotations") : tr("annotations saved separately")));
+        .arg(dirty_ ? QStringLiteral("unsaved annotations") : QStringLiteral("annotations saved separately")));
 }
 
 bool ReaderWindow::saveAnnotations(bool force)
 {
     if (!dirty_ && !force) return true;
     if (document_.pageCount() == 0) {
-        statusBar()->showMessage(tr("Open a PDF before saving annotations."));
+        statusBar()->showMessage(QStringLiteral("Open a PDF before saving annotations."));
         return false;
     }
     if (!annotationsWritable_) {
-        statusBar()->showMessage(tr("Annotations cannot be saved for this document."));
+        statusBar()->showMessage(QStringLiteral("Annotations cannot be saved for this document."));
         return false;
     }
     QString error;
@@ -364,7 +364,7 @@ bool ReaderWindow::saveAnnotations(bool force)
         dirty_ = false;
         statusBar()->clearMessage();
     } else {
-        statusBar()->showMessage(error + tr(" — Press Ctrl+S or use :write to retry."));
+        statusBar()->showMessage(error + QStringLiteral(" — Press Ctrl+S or use :write to retry."));
     }
     updateStatus();
     return saved;
@@ -374,8 +374,8 @@ bool ReaderWindow::confirmUnsavedChanges()
 {
     saveAnnotations();
     if (!dirty_) return true;
-    return QMessageBox::warning(this, tr("Unsaved annotations"),
-        tr("The annotation file could not be saved. Discard changes?"),
+    return QMessageBox::warning(this, QStringLiteral("Unsaved annotations"),
+        QStringLiteral("The annotation file could not be saved. Discard changes?"),
         QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Cancel) == QMessageBox::Discard;
 }
 
@@ -426,13 +426,13 @@ void ReaderWindow::commandError(const QString &message)
 void ReaderWindow::showChapterList()
 {
     if (chapters_.isEmpty()) {
-        commandError(tr("This PDF has no navigable chapters."));
+        commandError(QStringLiteral("This PDF has no navigable chapters."));
         return;
     }
     command_->hide();
     QDialog dialog(this);
     dialog.setObjectName("chapterDialog");
-    dialog.setWindowTitle(tr("Chapters"));
+    dialog.setWindowTitle(QStringLiteral("Chapters"));
     dialog.resize(520, 360);
     auto *layout = new QVBoxLayout(&dialog);
     auto *list = new QListWidget(&dialog);
@@ -441,7 +441,7 @@ void ReaderWindow::showChapterList()
     int currentStart = -1;
     for (int i = 0; i < chapters_.size(); ++i) {
         const auto &chapter = chapters_[i];
-        list->addItem(tr("%1. %2 — page %3").arg(i + 1).arg(chapter.title).arg(chapter.page + 1));
+        list->addItem(QStringLiteral("%1. %2 — page %3").arg(i + 1).arg(chapter.title).arg(chapter.page + 1));
         if (chapter.page <= page_ && chapter.page > currentStart) {
             current = i;
             currentStart = chapter.page;
@@ -463,7 +463,7 @@ void ReaderWindow::showChapterList()
 bool ReaderWindow::moveChapter(bool forward)
 {
     if (chapters_.isEmpty()) {
-        position_->setText(tr("This PDF has no navigable chapters."));
+        position_->setText(QStringLiteral("This PDF has no navigable chapters."));
         return false;
     }
     int destination = -1;
@@ -476,7 +476,7 @@ bool ReaderWindow::moveChapter(bool forward)
             destination = chapter.page;
     }
     if (destination < 0) {
-        position_->setText(forward ? tr("No next chapter.") : tr("No previous chapter."));
+        position_->setText(forward ? QStringLiteral("No next chapter.") : QStringLiteral("No previous chapter."));
         return false;
     }
     showPage(destination);
@@ -506,7 +506,7 @@ void ReaderWindow::executeCommand()
     }
     if (name == "s" || name == "save" || name == "w" || name == "write" || name == "wq") {
         if (!argument.isEmpty()) {
-            commandError(tr("Usage: :save, :write or :wq (no path)."));
+            commandError(QStringLiteral("Usage: :save, :write or :wq (no path)."));
             return;
         }
         if (!saveAnnotations(true)) {
@@ -515,11 +515,11 @@ void ReaderWindow::executeCommand()
         }
         command_->hide();
         if (name == "wq") close();
-        else statusBar()->showMessage(tr("Annotations saved."), 3000);
+        else statusBar()->showMessage(QStringLiteral("Annotations saved."), 3000);
         return;
     }
     if (name == "q" || name == "quit") {
-        if (!argument.isEmpty()) { commandError(tr("Usage: :q or :quit")); return; }
+        if (!argument.isEmpty()) { commandError(QStringLiteral("Usage: :q or :quit")); return; }
         command_->hide();
         close();
         return;
@@ -533,7 +533,7 @@ void ReaderWindow::executeCommand()
         const QStringList themes = {"light", "dark", "sepia", "burgundy"};
         const int theme = themes.indexOf(argument);
         if (!argument.isEmpty() && theme < 0) {
-            commandError(tr("Reading modes: light, dark, sepia, burgundy."));
+            commandError(QStringLiteral("Reading modes: light, dark, sepia, burgundy."));
             return;
         }
         command_->hide();
@@ -553,8 +553,8 @@ void ReaderWindow::executeCommand()
         bool valid;
         const int chapter = argument.toInt(&valid);
         if (!valid || chapter < 1 || chapter > chapters_.size()) {
-            commandError(chapters_.isEmpty() ? tr("This PDF has no navigable chapters.") :
-                tr("Invalid chapter. Enter a number from 1 to %1.").arg(chapters_.size()));
+            commandError(chapters_.isEmpty() ? QStringLiteral("This PDF has no navigable chapters.") :
+                QStringLiteral("Invalid chapter. Enter a number from 1 to %1.").arg(chapters_.size()));
             return;
         }
         command_->hide();
@@ -566,7 +566,7 @@ void ReaderWindow::executeCommand()
     bool valid;
     const int page = value.toInt(&valid);
     if (!valid || page < 1 || page > document_.pageCount()) {
-        commandError(tr("Invalid page. Enter a number from 1 to %1.").arg(document_.pageCount()));
+        commandError(QStringLiteral("Invalid page. Enter a number from 1 to %1.").arg(document_.pageCount()));
         return;
     }
     command_->hide();
