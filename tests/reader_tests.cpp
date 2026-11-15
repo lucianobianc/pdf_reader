@@ -25,6 +25,7 @@
 #include <QPdfWriter>
 #include <QScrollArea>
 #include <QScrollBar>
+#include <QStatusBar>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTest>
@@ -675,6 +676,51 @@ private slots:
         });
         QVERIFY(!window.isVisible());
         QCOMPARE(contents(path), original);
+    }
+    void writeAliasesAndSaveBeforeQuit() {
+        const QString path = directory_.filePath("write-commands.pdf");
+        QVERIFY(QFile::copy(pdf_, path));
+        const auto original = contents(path);
+        ReaderWindow window;
+        activate(window);
+        QVERIFY(window.openDocument(path));
+        QVERIFY(QDir().mkdir(path + ".nightreader.json"));
+        action(window, "Highlight")->trigger();
+        drag(*window.findChild<DocumentView *>()->pageCanvas(0), {50, 70}, {200, 140});
+        command(window, "wq");
+        QVERIFY(window.isVisible());
+        QVERIFY(window.findChild<QLineEdit *>("pageCommand")->isVisible());
+        QVERIFY(window.statusBar()->currentMessage().contains("Could not save"));
+        QVERIFY(QDir().rmdir(path + ".nightreader.json"));
+        Document document;
+        QString error;
+        QVERIFY(document.open(path, error));
+        AnnotationStore saved;
+        for (const auto &alias : {"s", "save", "w", "write"}) {
+            command(window, alias);
+            QVERIFY(saved.load(path, document.fingerprint(), 3, error));
+            QCOMPARE(saved.items.size(), 1);
+            QCOMPARE(saved.items[0].kind, Annotation::Kind::Highlight);
+            QVERIFY(window.isVisible());
+            QVERIFY(!window.findChild<QLineEdit *>("pageCommand")->isVisible());
+            QVERIFY(QFile::remove(path + ".nightreader.json"));
+        }
+        // Explicit save writes even when autosave has already cleared the dirty flag.
+        command(window, "write");
+        QVERIFY(QFile::exists(path + ".nightreader.json"));
+        command(window, "w " + path);
+        QVERIFY(window.findChild<QLineEdit *>("pageCommand")->isVisible());
+        QCOMPARE(contents(path), original);
+        command(window, "wq");
+        QVERIFY(!window.isVisible());
+        QVERIFY(saved.load(path, document.fingerprint(), 3, error));
+        QCOMPARE(saved.items.size(), 1);
+        QCOMPARE(contents(path), original);
+        ReaderWindow empty;
+        activate(empty);
+        command(empty, "wq");
+        QVERIFY(empty.isVisible());
+        QVERIFY(empty.statusBar()->currentMessage().contains("Open a PDF"));
     }
     void portugueseCatalog() {
         QTranslator translator;

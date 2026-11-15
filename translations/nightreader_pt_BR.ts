@@ -53,6 +53,7 @@ H/L: previous/next chapter · d/u: half a screen · gg/G: first/last page
 :c or :chapter: list chapters · :c 3: go to chapter
 :c next / :c prev: next/previous chapter
 :o or :open [path]: open PDF · :q or :quit: close the reader
+:s/:save or :w/:write: save annotations · :wq: save and quit
 :h or :help: help · :t or :theme [light|dark|sepia|burgundy]: reading mode
 t: cycle reading modes · Tab: toggle outline · +/−: zoom
 Right-click or a: annotation tools · Esc: navigate/cancel
@@ -67,6 +68,7 @@ H/L: capítulo anterior/próximo · d/u: meia tela · gg/G: primeira/última pá
 :c ou :chapter: listar capítulos · :c 3: ir ao capítulo
 :c next / :c prev: próximo/capítulo anterior
 :o ou :open [caminho]: abrir PDF · :q ou :quit: fechar o leitor
+:s/:save ou :w/:write: salvar anotações · :wq: salvar e sair
 :h ou :help: ajuda · :t ou :theme [light|dark|sepia|burgundy]: modo de leitura
 t: alternar modos de leitura · Tab: alternar sumário · +/−: zoom
 Botão direito ou a: ferramentas de anotação · Esc: navegar/cancelar
@@ -177,8 +179,16 @@ Anotações são salvas em &lt;PDF&gt;.nightreader.json. O PDF original nunca é
       <translation>anotações salvas separadamente</translation>
     </message>
     <message>
-      <source> — Press Ctrl+S to retry.</source>
-      <translation> — Ctrl+S para tentar novamente.</translation>
+      <source>Open a PDF before saving annotations.</source>
+      <translation>Abra um PDF antes de salvar anotações.</translation>
+    </message>
+    <message>
+      <source>Annotations cannot be saved for this document.</source>
+      <translation>Não é possível salvar anotações neste documento.</translation>
+    </message>
+    <message>
+      <source> — Press Ctrl+S or use :write to retry.</source>
+      <translation> — Pressione Ctrl+S ou use :write para tentar novamente.</translation>
     </message>
     <message>
       <source>Unsaved annotations</source>
@@ -207,6 +217,14 @@ Anotações são salvas em &lt;PDF&gt;.nightreader.json. O PDF original nunca é
     <message>
       <source>No previous chapter.</source>
       <translation>Não há capítulo anterior.</translation>
+    </message>
+    <message>
+      <source>Usage: :save, :write or :wq (no path).</source>
+      <translation>Use :save, :write ou :wq (sem caminho).</translation>
+    </message>
+    <message>
+      <source>Annotations saved.</source>
+      <translation>Anotações salvas.</translation>
     </message>
     <message>
       <source>Usage: :q or :quit</source>

@@ -107,6 +107,7 @@ void ReaderWindow::createActions()
                ":c or :chapter: list chapters · :c 3: go to chapter\n"
                ":c next / :c prev: next/previous chapter\n"
                ":o or :open [path]: open PDF · :q or :quit: close the reader\n"
+               ":s/:save or :w/:write: save annotations · :wq: save and quit\n"
                ":h or :help: help · :t or :theme [light|dark|sepia|burgundy]: reading mode\n"
                "t: cycle reading modes · Tab: toggle outline · +/−: zoom\n"
                "Right-click or a: annotation tools · Esc: navigate/cancel\n"
@@ -196,7 +197,7 @@ void ReaderWindow::createAnnotationTools()
     addAction(save);
     addButton(save, ReaderIcon::Save, 1, 4);
     annotationActions_.append(save);
-    connect(save, &QAction::triggered, this, [this] { annotationMenu_->hide(); saveAnnotations(); });
+    connect(save, &QAction::triggered, this, [this] { annotationMenu_->hide(); saveAnnotations(true); });
     readingModeIcon_ = new QLabel(body);
     readingModeIcon_->setAlignment(Qt::AlignCenter);
     readingModeIcon_->setToolTip(tr("Reading mode"));
@@ -346,13 +347,27 @@ void ReaderWindow::updateStatus()
         .arg(dirty_ ? tr("unsaved annotations") : tr("annotations saved separately")));
 }
 
-void ReaderWindow::saveAnnotations()
+bool ReaderWindow::saveAnnotations(bool force)
 {
-    if (!dirty_ || !annotationsWritable_ || document_.pageCount() == 0) return;
+    if (!dirty_ && !force) return true;
+    if (document_.pageCount() == 0) {
+        statusBar()->showMessage(tr("Open a PDF before saving annotations."));
+        return false;
+    }
+    if (!annotationsWritable_) {
+        statusBar()->showMessage(tr("Annotations cannot be saved for this document."));
+        return false;
+    }
     QString error;
-    if (annotations_.save(document_.path(), document_.fingerprint(), error)) dirty_ = false;
-    else statusBar()->showMessage(error + tr(" — Press Ctrl+S to retry."));
+    const bool saved = annotations_.save(document_.path(), document_.fingerprint(), error);
+    if (saved) {
+        dirty_ = false;
+        statusBar()->clearMessage();
+    } else {
+        statusBar()->showMessage(error + tr(" — Press Ctrl+S or use :write to retry."));
+    }
     updateStatus();
+    return saved;
 }
 
 bool ReaderWindow::confirmUnsavedChanges()
@@ -487,6 +502,20 @@ void ReaderWindow::executeCommand()
             if (path.startsWith("~/")) path.replace(0, 1, QDir::homePath());
             openDocument(path);
         }
+        return;
+    }
+    if (name == "s" || name == "save" || name == "w" || name == "write" || name == "wq") {
+        if (!argument.isEmpty()) {
+            commandError(tr("Usage: :save, :write or :wq (no path)."));
+            return;
+        }
+        if (!saveAnnotations(true)) {
+            command_->selectAll();
+            return;
+        }
+        command_->hide();
+        if (name == "wq") close();
+        else statusBar()->showMessage(tr("Annotations saved."), 3000);
         return;
     }
     if (name == "q" || name == "quit") {

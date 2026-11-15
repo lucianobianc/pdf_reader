@@ -36,7 +36,7 @@ private:
     void setZoom(double zoom);
     void populateOutline();
     void updateStatus();
-    void saveAnnotations();
+    bool saveAnnotations(bool force = false);
     bool confirmUnsavedChanges();
     void undo();
     void addAnnotation(const Annotation &mark);

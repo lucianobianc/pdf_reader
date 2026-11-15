@@ -28,14 +28,21 @@ sudo pkg install cmake ninja pkgconf qt6-base qt6-tools poppler-qt6
 From the repository directory:
 
 ```sh
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel 2
-./build/nightreader document.pdf
+make
+make install
+~/.local/bin/nightreader document.pdf
 ```
 
 Builds are tested on Linux. FreeBSD builds have not been verified yet.
 
-To install, run `cmake --install build --prefix /your/install/path`.
+Installation defaults to `~/.local`, without requiring root. To use another path:
+
+```sh
+make install PREFIX=/your/install/path
+```
+
+Use `make clean` to remove build outputs. It leaves installed files in place.
+You can also build, install, and clean in one step: `make install clean`.
 
 ## Keyboard navigation
 
@@ -74,6 +81,8 @@ Page and chapter numbers start at 1.
 | --- | --- |
 | `:o`, `:open` | Open the file picker |
 | `:o document.pdf`, `:open document.pdf` | Open a PDF by path |
+| `:s`, `:save`, `:w`, `:write` | Save annotations |
+| `:wq` | Save annotations and close the reader |
 | `:q`, `:quit` | Close the reader |
 | `:h`, `:help` | Show help |
 | `:t`, `:theme` | Cycle through reading modes |
@@ -117,20 +126,8 @@ to make changes. Undo history resets when you close the document.
 Annotations save automatically to `document.pdf.nightreader.json` beside the PDF.
 Keep both files together when moving or sharing your notes. You need write access
 to that directory. If saving fails, the status bar shows the error; Ctrl+S retries.
-Nightreader warns before you leave a document with unsaved changes.
-
-## Interface language
-
-The interface follows your system language, with English as the fallback.
-English and Brazilian Portuguese are available. To choose a language explicitly:
-
-```sh
-./build/nightreader --language en document.pdf
-./build/nightreader --language pt_BR document.pdf
-```
-
-Translation catalogs are built when Qt LinguistTools is installed. Without it,
-the interface is available in English.
+Nightreader warns before you leave a document with unsaved changes. `:wq` keeps
+the reader open if saving fails.
 
 ## Current limitations
 
@@ -144,11 +141,19 @@ the interface is available in English.
 Nightreader uses C++17, Qt 6, and Poppler. To run the tests after building:
 
 ```sh
-ctest --test-dir build --output-on-failure
+make test
 ```
 
-Tests run without a desktop session. To build without tests, configure CMake
-with `-DBUILD_TESTING=OFF`.
+Tests run without a desktop session. Common build options:
+
+```sh
+make BUILD_TYPE=Debug
+make JOBS=4
+make BUILD_TESTING=OFF
+```
+
+`make install DESTDIR=/tmp/package PREFIX=/usr/local` installs into a staging
+directory for packaging. GNU make and FreeBSD make are supported.
 
 ## License
 
